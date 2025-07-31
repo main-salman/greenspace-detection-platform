@@ -1,0 +1,60 @@
+{
+  "test_type": "SIMPLE_TEST",
+  "city": "Toronto, Ontario, Canada",
+  "test_date": "2025-07-30T10:02:19.914323",
+  "total_iterations": 5,
+  "tolerance_meters": 1.0,
+  "success": false,
+  "iterations": [
+    {
+      "iteration": 0,
+      "alignment_score": 0.0,
+      "misalignment_meters": 29.419257553058344,
+      "is_acceptable": false,
+      "actual_offset": [
+        25.0,
+        15.0
+      ]
+    },
+    {
+      "iteration": 1,
+      "alignment_score": 13.245121041526744,
+      "misalignment_meters": 17.35097579169465,
+      "is_acceptable": false,
+      "actual_offset": [
+        15.0,
+        9.0
+      ]
+    },
+    {
+      "iteration": 2,
+      "alignment_score": 48.71063009445641,
+      "misalignment_meters": 10.257873981108718,
+      "is_acceptable": false,
+      "actual_offset": [
+        9.0,
+        5.3999999999999995
+      ]
+    },
+    {
+      "iteration": 3,
+      "alignment_score": 69.8766350641857,
+      "misalignment_meters": 6.024672987162858,
+      "is_acceptable": false,
+      "actual_offset": [
+        5.3999999999999995,
+        3.2399999999999998
+      ]
+    },
+    {
+      "iteration": 4,
+      "alignment_score": 80.81614788664612,
+      "misalignment_meters": 3.836770422670775,
+      "is_acceptable": false,
+      "actual_offset": [
+        3.2399999999999998,
+        1.9439999999999997
+      ]
+    }
+  ]
+}

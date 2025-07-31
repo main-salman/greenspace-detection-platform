@@ -1,0 +1,80 @@
+{
+  "test_type": "SIMPLE_TEST",
+  "city": "New York, New York, USA",
+  "test_date": "2025-07-30T10:03:11.424250",
+  "total_iterations": 7,
+  "tolerance_meters": 1.0,
+  "success": true,
+  "iterations": [
+    {
+      "iteration": 0,
+      "alignment_score": 0.0,
+      "misalignment_meters": 29.208631234328806,
+      "is_acceptable": false,
+      "actual_offset": [
+        25.0,
+        15.0
+      ]
+    },
+    {
+      "iteration": 1,
+      "alignment_score": 26.891246548183418,
+      "misalignment_meters": 14.621750690363317,
+      "is_acceptable": false,
+      "actual_offset": [
+        12.5,
+        7.5
+      ]
+    },
+    {
+      "iteration": 2,
+      "alignment_score": 64.10042921730341,
+      "misalignment_meters": 7.179914156539317,
+      "is_acceptable": false,
+      "actual_offset": [
+        6.25,
+        3.75
+      ]
+    },
+    {
+      "iteration": 3,
+      "alignment_score": 83.01836996948494,
+      "misalignment_meters": 3.3963260061030134,
+      "is_acceptable": false,
+      "actual_offset": [
+        3.125,
+        1.875
+      ]
+    },
+    {
+      "iteration": 4,
+      "alignment_score": 89.90810039133082,
+      "misalignment_meters": 2.0183799217338354,
+      "is_acceptable": false,
+      "actual_offset": [
+        1.5625,
+        0.9375
+      ]
+    },
+    {
+      "iteration": 5,
+      "alignment_score": 94.95663955374577,
+      "misalignment_meters": 1.0086720892508463,
+      "is_acceptable": false,
+      "actual_offset": [
+        0.78125,
+        0.46875
+      ]
+    },
+    {
+      "iteration": 6,
+      "alignment_score": 96.25957703292752,
+      "misalignment_meters": 0.7480845934144964,
+      "is_acceptable": true,
+      "actual_offset": [
+        0.390625,
+        0.234375
+      ]
+    }
+  ]
+}

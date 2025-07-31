@@ -1,0 +1,58 @@
+This is Jupyter notebook code for downloading and processing the satellite images that I sent you.
+
+The preprocess code is supposed to remove clouds and combine satellite images for the month, but I think it’s not working perfectly yet. It’s also downloading and processing more data than necessary because I was planning to follow the method that the UN used to detect green space using an ML model.
+
+Use satellite images from STAC https://earth-search.aws.element84.com/v1
+
+
+Turn this into a nextjs based web app. In the app, allow me to pick any city in the @cities.json file. 
+
+Also add these features:
+- allow user to pick month and year
+- allow image to be downloaded/saved
+- show these with different colours: 
+Green - High Density (NDVI > 0.6)
+Yellow - Medium Density (NDVI 0.4-0.6)
+Purple - Low Density (NDVI 0.2-0.4)
+- only process data within the polygon borders defined in @cities.json
+
+- The map must be shown with the results highlighting different NDVI values
+
+Consider using these libraries if not already in use:
+### Key Libraries/APIs to Integrate
+
+-   @stac/client or direct STAC API calls for satellite data
+-   sharp or canvas for server-side image processing
+-   leaflet with react-leaflet or mapbox-gl-js for interactive mapping
+-   proj4 for coordinate transformations and georeferencing
+-   geotiff for handling georeferenced satellite imagery
+-   axios for HTTP requests
+-   react-query for data fetching and caching
+
+here are some guidelines to consider:
+### 2. Data Processing & Map Integration Pipeline
+
+-   Implement the NDVI calculation: `(NIR - Red) / (NIR + Red)`
+-   Handle band alignment and resampling
+-   Create false-color composites (NIR-Red-Green) exactly like Python script
+-   Apply vegetation highlighting with green overlay
+-   Convert processed imagery to map tiles (PNG tiles at multiple zoom levels)
+-   Generate georeferenced output that can be overlaid on interactive maps
+-   Store geographic bounds and projection information
+
+### 3. Error Handling & Edge Cases
+
+-   No satellite data available for date/location
+-   High cloud coverage warnings
+-   Network timeouts during processing
+-   Invalid location inputs
+-   Large image processing memory limits
+
+### 4. Performance Optimizations
+
+-   Implement image pyramids/tiles for large datasets
+-   Add caching for processed results
+-   Use web workers for client-side processing
+-   Lazy loading for image components
+-   Compression for satellite imagery
+
