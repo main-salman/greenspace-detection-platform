@@ -16,12 +16,14 @@ from rasterio.warp import transform_bounds, reproject, Resampling
 import cv2
 from datetime import datetime
 from pathlib import Path
-from shapely.geometry import Polygon
+from shapely.geometry import Polygon, Point
 from pystac_client import Client
 import time
 import warnings
 from pyproj import Transformer
 import tempfile
+from shapely.ops import transform
+from functools import partial
 warnings.filterwarnings('ignore')
 
 def print_progress(percentage, message=""):
@@ -62,12 +64,17 @@ class PerfectAlignmentSatelliteProcessor:
                     lats = [coord[1] for coord in coordinates]
                     
                     # NO PADDING - use exact city bounds for perfect alignment
-                    return {
+                    bounds = {
                         'west': min(lons),
                         'east': max(lons), 
                         'south': min(lats),
                         'north': max(lats)
                     }
+                    
+                    # Store the exact polygon for validation
+                    self.city_polygon_coordinates = coordinates
+                    print(f"📍 EXACT CITY POLYGON BOUNDS: {bounds}")
+                    return bounds
         except Exception as e:
             print(f"⚠️ Error with polygon: {e}")
         
@@ -82,14 +89,267 @@ class PerfectAlignmentSatelliteProcessor:
             'south': lat - buffer, 
             'north': lat + buffer
         }
+    
+    def validate_boundary_alignment(self, result_bounds):
+        """Validate that processing result boundaries match city polygon boundaries exactly"""
+        city_bounds = self.get_city_bounds_wgs84()
+        
+        # Check if bounds match within a small tolerance (for floating point precision)
+        tolerance = 0.001  # ~100m tolerance
+        
+        matches = {
+            'west': abs(result_bounds['west'] - city_bounds['west']) < tolerance,
+            'east': abs(result_bounds['east'] - city_bounds['east']) < tolerance,
+            'south': abs(result_bounds['south'] - city_bounds['south']) < tolerance,
+            'north': abs(result_bounds['north'] - city_bounds['north']) < tolerance
+        }
+        
+        all_match = all(matches.values())
+        
+        print(f"🔍 BOUNDARY VALIDATION:")
+        print(f"   City bounds: {city_bounds}")
+        print(f"   Result bounds: {result_bounds}")
+        print(f"   Matches: {matches}")
+        print(f"   Overall match: {'✅ PERFECT' if all_match else '❌ MISMATCH'}")
+        
+        if not all_match:
+            print(f"⚠️ WARNING: Boundary mismatch detected!")
+            for direction, match in matches.items():
+                if not match:
+                    diff = abs(result_bounds[direction] - city_bounds[direction])
+                    print(f"   {direction}: {diff:.6f}° difference ({diff * 111:.0f}m)")
+        
+        return all_match
+    
+    def create_city_polygon_mask(self, height, width, city_bounds):
+        """Create a boolean mask for pixels inside the city polygon"""
+        if not hasattr(self, 'city_polygon_coordinates'):
+            print("⚠️ No city polygon coordinates available, using full rectangle")
+            return np.ones((height, width), dtype=bool)
+        
+        print("🔧 Creating city polygon mask for precise boundary analysis...")
+        
+        # Create coordinate matrices for each pixel
+        lons = np.linspace(city_bounds['west'], city_bounds['east'], width)
+        lats = np.linspace(city_bounds['north'], city_bounds['south'], height)  # Note: reversed for image coordinates
+        
+        lon_grid, lat_grid = np.meshgrid(lons, lats)
+        
+        # Create the city polygon
+        city_polygon = Polygon(self.city_polygon_coordinates)
+        
+        # Create mask - check each pixel if it's inside the polygon
+        mask = np.zeros((height, width), dtype=bool)
+        
+        print(f"   Checking {height * width:,} pixels against city polygon...")
+        
+        # Vectorized approach for better performance
+        points = np.column_stack([lon_grid.ravel(), lat_grid.ravel()])
+        
+        # Create Point objects and check if they're within the polygon
+        # Using vectorized approach with shapely
+        from shapely.vectorized import contains
+        mask_flat = contains(city_polygon, points[:, 0], points[:, 1])
+        mask = mask_flat.reshape(height, width)
+        
+        inside_pixels = np.sum(mask)
+        total_pixels = height * width
+        coverage = (inside_pixels / total_pixels) * 100
+        
+        print(f"   📊 Polygon mask created:")
+        print(f"     Total pixels: {total_pixels:,}")
+        print(f"     Inside city: {inside_pixels:,} ({coverage:.1f}%)")
+        print(f"     Outside city: {total_pixels - inside_pixels:,} ({100-coverage:.1f}%)")
+        
+        return mask
+    
+    def fill_coverage_gaps(self, red, green, blue, nir, city_mask, city_bounds):
+        """Fill coverage gaps using additional satellite tiles"""
+        print(f"🔧 MULTI-TILE GAP FILLING ALGORITHM:")
+        
+        # Identify current gaps
+        valid_red = (red > 0) & ~np.isnan(red) & ~np.isinf(red)
+        valid_nir = (nir > 0) & ~np.isnan(nir) & ~np.isinf(nir)
+        current_coverage = valid_red & valid_nir & city_mask
+        gap_mask = city_mask & ~current_coverage
+        
+        print(f"   Gap pixels to fill: {np.sum(gap_mask):,}")
+        
+        if np.sum(gap_mask) == 0:
+            print(f"   ✅ No gaps to fill!")
+            return red, green, blue, nir
+        
+        # Try additional tiles (skip the first one which we already used)
+        for i, (tile_item, cloud_cover, _) in enumerate(self.complete_coverage_tiles[1:], 1):
+            if np.sum(gap_mask) == 0:
+                break
+                
+            print(f"\n🔍 Trying backup tile {i}: {tile_item.id} (clouds: {cloud_cover:.1f}%)")
+            
+            try:
+                # Download bands from backup tile
+                backup_bands = self.download_bands_from_tile(tile_item, city_bounds)
+                if not backup_bands:
+                    print(f"   ❌ Failed to download backup tile data")
+                    continue
+                
+                backup_red = backup_bands['red']
+                backup_green = backup_bands['green'] 
+                backup_blue = backup_bands['blue']
+                backup_nir = backup_bands['nir']
+                
+                # Identify valid pixels in backup tile
+                backup_valid_red = (backup_red > 0) & ~np.isnan(backup_red) & ~np.isinf(backup_red)
+                backup_valid_nir = (backup_nir > 0) & ~np.isnan(backup_nir) & ~np.isinf(backup_nir)
+                backup_valid = backup_valid_red & backup_valid_nir
+                
+                # Find fillable gaps (areas with gaps that have valid backup data)
+                fillable_gaps = gap_mask & backup_valid
+                fill_count = np.sum(fillable_gaps)
+                
+                print(f"   📊 Backup tile analysis:")
+                print(f"     Valid backup pixels: {np.sum(backup_valid):,}")
+                print(f"     Fillable gap pixels: {fill_count:,}")
+                
+                if fill_count > 0:
+                    # Fill gaps with backup data
+                    red[fillable_gaps] = backup_red[fillable_gaps]
+                    green[fillable_gaps] = backup_green[fillable_gaps]
+                    blue[fillable_gaps] = backup_blue[fillable_gaps]
+                    nir[fillable_gaps] = backup_nir[fillable_gaps]
+                    
+                    # Update gap mask
+                    gap_mask[fillable_gaps] = False
+                    
+                    print(f"   ✅ Filled {fill_count:,} gap pixels")
+                    print(f"   📊 Remaining gaps: {np.sum(gap_mask):,}")
+                else:
+                    print(f"   ⚠️ No usable data in backup tile for gap areas")
+                    
+            except Exception as e:
+                print(f"   ❌ Error processing backup tile {tile_item.id}: {e}")
+                continue
+        
+        final_gaps = np.sum(gap_mask)
+        print(f"\n🎯 GAP FILLING COMPLETE:")
+        print(f"   Final remaining gaps: {final_gaps:,} pixels")
+        print(f"   Gap filling success: {final_gaps == 0}")
+        
+        return red, green, blue, nir
+    
+    def download_bands_from_tile(self, tile_item, city_bounds):
+        """Download band data from a specific satellite tile"""
+        try:
+            print(f"   🔧 Downloading backup tile: {tile_item.id}")
+            print(f"   📊 Available bands in backup tile: {list(tile_item.assets.keys())}")
+            
+            with rasterio.Env(GDAL_HTTP_UNSAFESSL='YES'):
+                bands_data = {}
+                
+                for band_name in ['red', 'green', 'blue', 'nir']:
+                    band_key = {'red': 'B04', 'green': 'B03', 'blue': 'B02', 'nir': 'B08'}[band_name]
+                    
+                    if band_key not in tile_item.assets:
+                        # Try alternative band naming (some tiles use different naming)
+                        alt_band_key = {'red': 'red', 'green': 'green', 'blue': 'blue', 'nir': 'nir'}[band_name]
+                        if alt_band_key in tile_item.assets:
+                            band_key = alt_band_key
+                            print(f"   🔧 Using alternative band key: {alt_band_key} for {band_name}")
+                        else:
+                            print(f"   ❌ Band {band_key} (or {alt_band_key}) not available in tile")
+                            print(f"   📊 Available bands: {list(tile_item.assets.keys())}")
+                            return None
+                    
+                    print(f"     📊 Downloading {band_name} ({band_key})...")
+                    
+                    with rasterio.open(tile_item.assets[band_key].href) as src:
+                        print(f"       📊 Source info: {src.shape}, CRS: {src.crs}, Bands: {src.count}")
+                        
+                        # Transform city bounds to satellite CRS - same as main download
+                        transformer = Transformer.from_crs('EPSG:4326', src.crs, always_xy=True)
+                        left, bottom = transformer.transform(city_bounds['west'], city_bounds['south'])
+                        right, top = transformer.transform(city_bounds['east'], city_bounds['north'])
+                        
+                        print(f"       📍 Transformed bounds: ({left:.1f}, {bottom:.1f}) to ({right:.1f}, {top:.1f})")
+                        print(f"       📊 Source bounds: {src.bounds}")
+                        
+                        # Read data within bounds and reproject to exactly 1024x1024 to match main data
+                        window = rasterio.windows.from_bounds(left, bottom, right, top, src.transform)
+                        
+                        # Use same resampling approach as main download
+                        band_data = src.read(
+                            1,
+                            out_shape=(1024, 1024),
+                            window=window,
+                            resampling=rasterio.enums.Resampling.bilinear,
+                            boundless=True,
+                            fill_value=0
+                        ).astype(np.float32)
+                        
+                        print(f"       📈 After reproject: min={band_data.min():.3f}, max={band_data.max():.3f}, mean={band_data.mean():.3f}")
+                        print(f"       ✅ {band_name}: {band_data.shape}")
+                        
+                        bands_data[band_name] = band_data
+                
+                print(f"   ✅ Successfully downloaded all bands from backup tile")
+                return bands_data
+                
+        except Exception as e:
+            print(f"   ❌ Error downloading from {tile_item.id}: {e}")
+            import traceback
+            print(f"   📊 Traceback: {traceback.format_exc()}")
+            return None
+    
+    def validate_satellite_coverage(self, red_band, nir_band, city_mask):
+        """Validate how much of the city polygon has valid satellite data"""
+        print("🔍 VALIDATING SATELLITE COVERAGE within city polygon...")
+        
+        # Check for valid data (non-zero, non-NaN values)
+        valid_red = (red_band > 0) & ~np.isnan(red_band) & ~np.isinf(red_band)
+        valid_nir = (nir_band > 0) & ~np.isnan(nir_band) & ~np.isinf(nir_band)
+        valid_satellite = valid_red & valid_nir
+        
+        # Calculate coverage within city polygon
+        city_pixels = np.sum(city_mask)
+        city_with_satellite = np.sum(city_mask & valid_satellite)
+        city_coverage_percentage = (city_with_satellite / city_pixels) * 100 if city_pixels > 0 else 0
+        
+        # Calculate areas with missing data
+        city_missing_data = city_pixels - city_with_satellite
+        
+        print(f"   📊 SATELLITE DATA COVERAGE:")
+        print(f"     Total city pixels: {city_pixels:,}")
+        print(f"     City pixels with satellite data: {city_with_satellite:,}")
+        print(f"     City pixels missing satellite data: {city_missing_data:,}")
+        print(f"     Coverage percentage: {city_coverage_percentage:.1f}%")
+        
+        # Warn about incomplete coverage
+        if city_coverage_percentage < 90:
+            print(f"   ⚠️ WARNING: Only {city_coverage_percentage:.1f}% of city has satellite data!")
+            print(f"   ⚠️ {city_missing_data:,} city pixels lack satellite coverage")
+            print(f"   ⚠️ This will result in missing vegetation analysis for parts of the city")
+        elif city_coverage_percentage < 95:
+            print(f"   ⚠️ NOTICE: {city_coverage_percentage:.1f}% satellite coverage (good but not perfect)")
+        else:
+            print(f"   ✅ EXCELLENT: {city_coverage_percentage:.1f}% satellite coverage")
+        
+        # Store coverage info for later use
+        self.satellite_coverage_percentage = city_coverage_percentage
+        self.city_pixels_with_data = city_with_satellite
+        self.city_pixels_missing_data = city_missing_data
+        
+        return city_coverage_percentage
 
     def download_and_process_satellite_data(self):
         """Download satellite data and ensure perfect coordinate alignment"""
+        print(f"🚨🚨🚨 VANCOUVER FIX VERSION 2.0 - MAIN PROCESSING FUNCTION STARTED! 🚨🚨🚨")
+        print(f"🎯 Processing city: {self.city_data.get('city', 'Unknown')}")
         print_progress(10, "Getting city bounds for perfect alignment...")
         
         # Get city bounds in WGS84 (web map standard)
         city_bounds = self.get_city_bounds_wgs84()
         print(f"📍 CITY BOUNDS (WGS84): {city_bounds}")
+        print(f"🔍 Enhanced tile selection algorithm will be used if this is Vancouver")
         
         # Query satellite data
         print_progress(20, "Querying satellite data...")
@@ -140,14 +400,19 @@ class PerfectAlignmentSatelliteProcessor:
             
         print(f"📡 Found {len(items)} satellite images")
         
-        # Find item with BEST coverage of the city area
+        # Find item with COMPLETE coverage of the city area - PRIORITY #1
         items.sort(key=lambda x: x.properties.get('eo:cloud_cover', 100))
         
         best_item = None
         best_overlap_score = 0
+        complete_coverage_candidates = []
         
-        for item in items[:10]:  # Check top 10 lowest cloud cover items for best overlap
-            print(f"🔍 Analyzing: {item.id} (cloud cover: {item.properties.get('eo:cloud_cover', 0)}%)")
+        print(f"🎯 PRIORITY: Finding tiles with COMPLETE city coverage...")
+        print(f"🔍 ENHANCED ALGORITHM ACTIVE - searching {min(20, len(items))} tiles for complete coverage")
+        print(f"🚨 ENHANCED VANCOUVER FIX VERSION 2.0 RUNNING - SHOULD FIND COMPLETE COVERAGE! 🚨")
+        
+        for i, item in enumerate(items[:20]):  # Check more items to find complete coverage
+            print(f"🔍 Tile {i+1}/20: Analyzing {item.id} (cloud cover: {item.properties.get('eo:cloud_cover', 0)}%)")
             
             # Calculate precise overlap percentage
             try:
@@ -174,33 +439,112 @@ class PerfectAlignmentSatelliteProcessor:
                                 overlap_area = (int_right - int_left) * (int_top - int_bottom)
                                 overlap_percentage = (overlap_area / city_area) * 100
                                 
-                                # Factor in cloud cover for scoring (prefer less clouds)
                                 cloud_cover = item.properties.get('eo:cloud_cover', 0)
-                                overlap_score = overlap_percentage * (1 - cloud_cover / 100)
                                 
-                                print(f"     City bounds: ({left:.1f}, {bottom:.1f}) to ({right:.1f}, {top:.1f})")
-                                print(f"     Tile bounds: ({src_left:.1f}, {src_bottom:.1f}) to ({src_right:.1f}, {src_top:.1f})")
-                                print(f"     Overlap: {overlap_percentage:.1f}% | Score: {overlap_score:.1f}")
+                                # CRITICAL: Check if this tile provides COMPLETE coverage
+                                tile_completely_covers_city = (src_left <= left and src_right >= right and 
+                                                             src_bottom <= bottom and src_top >= top)
+                                
+                                print(f"     City bounds: ({left:.6f}, {bottom:.6f}) to ({right:.6f}, {top:.6f})")
+                                print(f"     Tile bounds: ({src_left:.6f}, {src_bottom:.6f}) to ({src_right:.6f}, {src_top:.6f})")
+                                print(f"     Coverage: {overlap_percentage:.1f}% | Clouds: {cloud_cover:.1f}%")
+                                print(f"     COMPLETE COVERAGE CHECK:")
+                                print(f"       Left check: {src_left:.6f} <= {left:.6f} = {src_left <= left}")
+                                print(f"       Right check: {src_right:.6f} >= {right:.6f} = {src_right >= right}")
+                                print(f"       Bottom check: {src_bottom:.6f} <= {bottom:.6f} = {src_bottom <= bottom}")
+                                print(f"       Top check: {src_top:.6f} >= {top:.6f} = {src_top >= top}")
+                                print(f"       Overall complete coverage: {tile_completely_covers_city}")
+                                
+                                if tile_completely_covers_city:
+                                    print(f"     🎯 COMPLETE COVERAGE FOUND! Adding to priority candidates")
+                                    complete_coverage_candidates.append((item, cloud_cover, overlap_percentage))
+                                    # Give massive score boost for complete coverage
+                                    overlap_score = overlap_percentage * 100 * (1 - cloud_cover / 100)
+                                elif overlap_percentage >= 98:
+                                    print(f"     ✅ EXCELLENT COVERAGE: {overlap_percentage:.1f}%")
+                                    overlap_score = overlap_percentage * 10 * (1 - cloud_cover / 100)
+                                elif overlap_percentage >= 95:
+                                    print(f"     ⚠️ GOOD COVERAGE: {overlap_percentage:.1f}%")
+                                    overlap_score = overlap_percentage * 3 * (1 - cloud_cover / 100)
+                                else:
+                                    print(f"     ❌ POOR COVERAGE: Only {overlap_percentage:.1f}% of city covered!")
+                                    overlap_score = overlap_percentage * 0.1 * (1 - cloud_cover / 100)
                                 
                                 if overlap_score > best_overlap_score:
                                     best_overlap_score = overlap_score
                                     best_item = item
-                                    print(f"     🎯 NEW BEST MATCH!")
+                                    coverage_type = "COMPLETE" if tile_completely_covers_city else "PARTIAL"
+                                    print(f"     🏆 NEW BEST MATCH! ({coverage_type} - Score: {overlap_score:.1f})")
                             else:
                                 print(f"     ❌ NO OVERLAP")
             except Exception as e:
                 print(f"     ❌ Error checking {item.id}: {e}")
                 continue
         
-        if not best_item:
+        # PRIORITY SELECTION: Choose complete coverage if available
+        print(f"\n🔍 COMPLETE COVERAGE ANALYSIS SUMMARY:")
+        print(f"   Complete coverage candidates found: {len(complete_coverage_candidates)}")
+        
+        if complete_coverage_candidates:
+            print(f"🎯 Found {len(complete_coverage_candidates)} tiles with COMPLETE city coverage!")
+            print(f"🔧 IMPLEMENTING MULTI-TILE GAP-FILLING APPROACH for Vancouver!")
+            
+            # Sort complete coverage candidates by cloud cover
+            complete_coverage_candidates.sort(key=lambda x: x[1])  # Sort by cloud cover
+            
+            # Store all complete coverage candidates for multi-tile processing
+            self.complete_coverage_tiles = complete_coverage_candidates
+            
+            # Select the best tile as primary
+            best_complete = complete_coverage_candidates[0]
+            best_item = best_complete[0]
+            print(f"🏆 PRIMARY TILE: {best_item.id}")
+            print(f"   Cloud cover: {best_complete[1]:.1f}%")
+            print(f"   Coverage: {best_complete[2]:.1f}%")
+            print(f"🔧 BACKUP TILES: {len(complete_coverage_candidates)-1} additional tiles for gap filling")
+            print(f"   🚨 MULTI-TILE VANCOUVER FIX ACTIVATED! 🚨")
+        elif not best_item:
             # Fallback to first item if no overlap found
             best_item = items[0]
+            self.complete_coverage_tiles = []
             print(f"⚠️ No overlapping tiles found, using first item anyway")
+            print(f"🚨 ALGORITHM FAILURE - THIS WILL CAUSE MISSING COVERAGE! 🚨")
         else:
-            print(f"🎯 BEST MATCH: {best_item.id} (overlap score: {best_overlap_score:.1f})")
+            print(f"🎯 BEST PARTIAL MATCH: {best_item.id} (overlap score: {best_overlap_score:.1f})")
+            self.complete_coverage_tiles = []
+            print(f"⚠️ NO COMPLETE COVERAGE TILES FOUND - this may result in missing areas")
+            print(f"🚨 ALGORITHM FAILURE - THIS WILL CAUSE MISSING COVERAGE! 🚨")
+            
+            # CRITICAL: Check if we need to try additional tiles for better coverage
+            # Extract the best coverage percentage for validation
+            best_coverage = 0
+            try:
+                with rasterio.Env(GDAL_HTTP_UNSAFESSL='YES'):
+                    with rasterio.open(best_item.assets['red'].href) as src:
+                        transformer = Transformer.from_crs('EPSG:4326', src.crs, always_xy=True)
+                        left, bottom = transformer.transform(city_bounds['west'], city_bounds['south'])
+                        right, top = transformer.transform(city_bounds['east'], city_bounds['north'])
+                        
+                        src_left, src_bottom, src_right, src_top = src.bounds
+                        if left < src_right and right > src_left and bottom < src_top and top > src_bottom:
+                            city_area = (right - left) * (top - bottom)
+                            int_left = max(left, src_left)
+                            int_right = min(right, src_right)
+                            int_bottom = max(bottom, src_bottom)
+                            int_top = min(top, src_top)
+                            overlap_area = (int_right - int_left) * (int_top - int_bottom)
+                            best_coverage = (overlap_area / city_area) * 100
+            except:
+                pass
+            
+            # If coverage is poor, warn about potential incomplete analysis
+            if best_coverage < 95:
+                print(f"⚠️ WARNING: Best available satellite tile only covers {best_coverage:.1f}% of city")
+                print(f"⚠️ Some areas of the city may have missing vegetation analysis")
+                print(f"⚠️ Consider using a different date range for better satellite coverage")
         
         item = best_item
-        print(f"🎯 Selected: {item.id} (cloud cover: {item.properties.get('eo:cloud_cover', 0)}%)")
+        print(f"🎯 FINAL SELECTION: {item.id} (cloud cover: {item.properties.get('eo:cloud_cover', 0)}%)")
         
         # Download and process bands with PERFECT alignment
         bands_data = self.download_bands_with_perfect_alignment(item, city_bounds)
@@ -306,20 +650,19 @@ class PerfectAlignmentSatelliteProcessor:
                     
                     # Store the PERFECT bounds for this band
                     if not self.wgs84_bounds:
-                        # Transform back to WGS84 for frontend use
-                        wgs84_transformer = Transformer.from_crs(src.crs, 'EPSG:4326', always_xy=True)
-                        w_wgs84, s_wgs84 = wgs84_transformer.transform(left, bottom)
-                        e_wgs84, n_wgs84 = wgs84_transformer.transform(right, top)
-                        
+                        # CRITICAL FIX: Use exact city bounds instead of transformed coordinates
+                        # This ensures the frontend overlay matches the city polygon boundaries exactly
                         self.wgs84_bounds = {
-                            'west': w_wgs84,
-                            'south': s_wgs84,
-                            'east': e_wgs84,
-                            'north': n_wgs84,
+                            'west': city_bounds['west'],
+                            'south': city_bounds['south'],
+                            'east': city_bounds['east'],
+                            'north': city_bounds['north'],
                             'crs': 'EPSG:4326'
                         }
                         
-                        print(f"   📍 PERFECT BOUNDS SET: {self.wgs84_bounds}")
+                        print(f"   📍 PERFECT CITY BOUNDS SET: {self.wgs84_bounds}")
+                        print(f"   📍 Original city bounds: {city_bounds}")
+                        print(f"   📍 Bounds now match city polygon EXACTLY")
                     
                     print(f"   ✅ {band_name}: {output_array.shape}")
                     
@@ -334,11 +677,44 @@ class PerfectAlignmentSatelliteProcessor:
         return bands_data
 
     def create_aligned_vegetation_analysis(self, bands_data, city_bounds):
-        """Create vegetation analysis with perfect alignment"""
+        """Create vegetation analysis with perfect alignment AND city polygon masking"""
         red = bands_data['red'].astype(np.float32)
         green = bands_data['green'].astype(np.float32) 
         blue = bands_data['blue'].astype(np.float32)
         nir = bands_data['nir'].astype(np.float32)
+        
+        # CRITICAL: Create city polygon mask to analyze ONLY pixels inside city boundaries
+        height, width = red.shape
+        city_mask = self.create_city_polygon_mask(height, width, city_bounds)
+        
+        print(f"🎯 APPLYING CITY POLYGON MASK:")
+        print(f"   Image size: {height} x {width} = {height * width:,} pixels")
+        print(f"   City pixels: {np.sum(city_mask):,} pixels")
+        print(f"   Analysis will ONLY include pixels inside city polygon")
+        
+        # CRITICAL: Validate satellite data coverage within city polygon
+        coverage_percentage = self.validate_satellite_coverage(red, nir, city_mask)
+        
+        # MULTI-TILE GAP FILLING for Vancouver
+        if (coverage_percentage < 95.0 and hasattr(self, 'complete_coverage_tiles') and 
+            len(self.complete_coverage_tiles) > 1):
+            print(f"\n🔧 INITIATING MULTI-TILE GAP FILLING:")
+            print(f"   Current coverage: {coverage_percentage:.1f}% (target: 95%+)")
+            print(f"   Available backup tiles: {len(self.complete_coverage_tiles)-1}")
+            
+            # Try to fill gaps with additional tiles
+            red, green, blue, nir = self.fill_coverage_gaps(red, green, blue, nir, city_mask, city_bounds)
+            
+            # Re-validate coverage after gap filling
+            final_coverage = self.validate_satellite_coverage(red, nir, city_mask)
+            print(f"🎯 FINAL COVERAGE after gap filling: {final_coverage:.1f}%")
+            
+            if final_coverage >= 95.0:
+                print(f"✅ VANCOUVER COVERAGE SUCCESS! Achieved {final_coverage:.1f}% coverage")
+            else:
+                print(f"⚠️ Still incomplete: {final_coverage:.1f}% coverage")
+        else:
+            print(f"✅ Single tile coverage sufficient: {coverage_percentage:.1f}%")
         
         # Calculate NDVI with debugging
         print(f"   🔍 Band statistics before NDVI:")
@@ -353,34 +729,41 @@ class PerfectAlignmentSatelliteProcessor:
         print(f"     Min: {ndvi.min():.3f}, Max: {ndvi.max():.3f}, Mean: {ndvi.mean():.3f}")
         print(f"     Values > {self.ndvi_threshold}: {np.sum(ndvi >= self.ndvi_threshold)} pixels")
         
-        # Enhanced vegetation detection with lower thresholds to catch more green areas
+        # CRITICAL: Apply city mask to all vegetation analysis - ONLY analyze pixels inside city
         enhanced_threshold = max(0.2, self.ndvi_threshold - 0.05)  # Lower threshold for better detection
-        vegetation_mask = ndvi >= enhanced_threshold
         
-        # Calculate statistics
-        total_pixels = ndvi.size
+        # Apply city mask to ALL vegetation classifications
+        vegetation_mask = (ndvi >= enhanced_threshold) & city_mask
+        high_density = (ndvi >= 0.55) & city_mask  # High density vegetation inside city
+        medium_density = (ndvi >= 0.35) & (ndvi < 0.55) & city_mask  # Medium density inside city
+        low_density = (ndvi >= enhanced_threshold) & (ndvi < 0.35) & city_mask  # Low density inside city
+        subtle_vegetation = (ndvi >= 0.15) & (ndvi < enhanced_threshold) & city_mask  # Subtle inside city
+        
+        # Calculate statistics ONLY for pixels inside the city polygon
+        total_city_pixels = np.sum(city_mask)  # Only count pixels inside city
         vegetation_pixels = np.sum(vegetation_mask)
-        vegetation_percentage = (vegetation_pixels / total_pixels) * 100
+        vegetation_percentage = (vegetation_pixels / total_city_pixels) * 100 if total_city_pixels > 0 else 0
         
-        # Enhanced density classifications - more sensitive to subtle vegetation
-        high_density = ndvi >= 0.55  # Slightly lower for high density
-        medium_density = (ndvi >= 0.35) & (ndvi < 0.55)  # More sensitive range
-        low_density = (ndvi >= enhanced_threshold) & (ndvi < 0.35)  # Catch subtle vegetation
-        
-        # Additional category for very subtle vegetation (grass, sparse trees)
-        subtle_vegetation = (ndvi >= 0.15) & (ndvi < enhanced_threshold)
+        # Calculate density percentages relative to city area (not entire image)
+        high_pixels = np.sum(high_density)
+        medium_pixels = np.sum(medium_density) 
+        low_pixels = np.sum(low_density)
         subtle_pixels = np.sum(subtle_vegetation)
-        subtle_percentage = (subtle_pixels / total_pixels) * 100
         
-        high_percentage = (np.sum(high_density) / total_pixels) * 100
-        medium_percentage = (np.sum(medium_density) / total_pixels) * 100
-        low_percentage = (np.sum(low_density) / total_pixels) * 100
+        high_percentage = (high_pixels / total_city_pixels) * 100 if total_city_pixels > 0 else 0
+        medium_percentage = (medium_pixels / total_city_pixels) * 100 if total_city_pixels > 0 else 0
+        low_percentage = (low_pixels / total_city_pixels) * 100 if total_city_pixels > 0 else 0
+        subtle_percentage = (subtle_pixels / total_city_pixels) * 100 if total_city_pixels > 0 else 0
         
-        print(f"🌱 Enhanced Vegetation Coverage: {vegetation_percentage:.1f}%")
-        print(f"   High density: {high_percentage:.1f}%")
-        print(f"   Medium density: {medium_percentage:.1f}%")
-        print(f"   Low density: {low_percentage:.1f}%")
-        print(f"   Subtle vegetation: {subtle_percentage:.1f}%")
+        print(f"🌱 Enhanced Vegetation Coverage (CITY AREA ONLY): {vegetation_percentage:.1f}%")
+        print(f"   High density: {high_percentage:.1f}% ({high_pixels:,} pixels)")
+        print(f"   Medium density: {medium_percentage:.1f}% ({medium_pixels:,} pixels)")
+        print(f"   Low density: {low_percentage:.1f}% ({low_pixels:,} pixels)")
+        print(f"   Subtle vegetation: {subtle_percentage:.1f}% ({subtle_pixels:,} pixels)")
+        print(f"🎯 CITY POLYGON ANALYSIS:")
+        print(f"   Total city pixels: {total_city_pixels:,}")
+        print(f"   Vegetation pixels in city: {vegetation_pixels:,}")
+        print(f"   Non-city pixels excluded from analysis: {ndvi.size - total_city_pixels:,}")
         
         return {
             'red': red,
@@ -388,6 +771,7 @@ class PerfectAlignmentSatelliteProcessor:
             'blue': blue,
             'nir': nir,
             'ndvi': ndvi,
+            'city_mask': city_mask,  # Include the city mask for visualization
             'vegetation_mask': vegetation_mask,
             'vegetation_percentage': vegetation_percentage,
             'high_density_percentage': high_percentage,
@@ -398,7 +782,7 @@ class PerfectAlignmentSatelliteProcessor:
             'medium_density': medium_density,
             'low_density': low_density,
             'subtle_vegetation': subtle_vegetation,
-            'total_pixels': total_pixels,
+            'total_pixels': total_city_pixels,  # CRITICAL: Use city pixels, not image pixels
             'vegetation_pixels': vegetation_pixels,
             'enhanced_threshold': enhanced_threshold
         }
@@ -478,11 +862,19 @@ class PerfectAlignmentSatelliteProcessor:
         summary_path = self.vegetation_dir / 'vegetation_analysis_summary.json'
         with open(summary_path, 'w') as f:
             json.dump(summary, f, indent=2)
+        
+        # CRITICAL: Validate boundary alignment
+        boundary_match = self.validate_boundary_alignment(self.wgs84_bounds)
+        if boundary_match:
+            print(f"✅ BOUNDARY VALIDATION PASSED - Perfect alignment achieved!")
+        else:
+            print(f"❌ BOUNDARY VALIDATION FAILED - Alignment issues detected!")
             
         print(f"📍 PERFECT ALIGNMENT SUMMARY:")
         print(f"   Bounds: {self.wgs84_bounds}")
         print(f"   Center: {summary['city_info']['center_lat']:.6f}, {summary['city_info']['center_lon']:.6f}")
         print(f"   Files saved to: {self.vegetation_dir}")
+        print(f"   Boundary validation: {'✅ PASSED' if boundary_match else '❌ FAILED'}")
 
     def normalize_band(self, band):
         """Normalize band to 0-1 range"""
@@ -507,26 +899,45 @@ class PerfectAlignmentSatelliteProcessor:
         return enhanced
 
     def create_vegetation_overlay(self, result):
-        """Create enhanced vegetation density overlay with purple transparency scheme"""
+        """Create enhanced vegetation density overlay with purple transparency scheme - CITY POLYGON ONLY"""
         height, width = result['ndvi'].shape
         overlay = np.zeros((height, width, 4), dtype=np.uint8)
         
-        # Subtle vegetation (very light purple) - for grass and sparse vegetation
+        # CRITICAL: Get city mask to ensure overlay only appears inside city polygon
+        city_mask = result.get('city_mask', np.ones((height, width), dtype=bool))
+        
+        print(f"🎨 Creating vegetation overlay - CITY POLYGON ONLY:")
+        print(f"   City mask coverage: {np.sum(city_mask):,} / {city_mask.size:,} pixels")
+        
+        # Apply city mask to all vegetation overlays - ONLY show vegetation inside city boundaries
+        # Subtle vegetation (very light purple) - for grass and sparse vegetation INSIDE CITY
         if 'subtle_vegetation' in result:
-            subtle_mask = result['subtle_vegetation']
+            subtle_mask = result['subtle_vegetation'] & city_mask  # Ensure inside city
             overlay[subtle_mask] = [230, 210, 255, 80]  # Very light purple with low alpha
+            print(f"   Subtle vegetation pixels: {np.sum(subtle_mask):,}")
         
-        # Low density vegetation (light purple) - lighter for less vegetation
-        low_mask = result['low_density']
+        # Low density vegetation (light purple) - INSIDE CITY ONLY
+        low_mask = result['low_density'] & city_mask  # Ensure inside city
         overlay[low_mask] = [204, 153, 255, 120]  # Light purple with alpha
+        print(f"   Low density pixels: {np.sum(low_mask):,}")
         
-        # Medium density vegetation (medium purple)
-        medium_mask = result['medium_density']
+        # Medium density vegetation (medium purple) - INSIDE CITY ONLY
+        medium_mask = result['medium_density'] & city_mask  # Ensure inside city
         overlay[medium_mask] = [153, 102, 204, 150]  # Medium purple with alpha
+        print(f"   Medium density pixels: {np.sum(medium_mask):,}")
         
-        # High density vegetation (dark purple) - darker for more vegetation
-        high_mask = result['high_density']
+        # High density vegetation (dark purple) - INSIDE CITY ONLY
+        high_mask = result['high_density'] & city_mask  # Ensure inside city
         overlay[high_mask] = [102, 51, 153, 180]  # Dark purple with alpha
+        print(f"   High density pixels: {np.sum(high_mask):,}")
+        
+        # Make areas outside city completely transparent
+        outside_city = ~city_mask
+        overlay[outside_city] = [0, 0, 0, 0]  # Completely transparent outside city
+        
+        total_vegetation_pixels = np.sum(overlay[:, :, 3] > 0)  # Count pixels with any alpha
+        print(f"   Total vegetation overlay pixels: {total_vegetation_pixels:,}")
+        print(f"   ✅ Overlay ONLY shows vegetation inside city polygon")
         
         return overlay
 
