@@ -51,7 +51,7 @@ A powerful, **API-key-free** satellite imagery analysis platform that detects an
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/greenspace-detection-platform.git
+git clone https://github.com/main-salman/greenspace-detection-platform.git
 cd greenspace-detection-platform/greenspace-app
 
 # Install Node.js dependencies
