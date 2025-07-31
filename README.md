@@ -14,11 +14,11 @@ A powerful, **API-key-free** satellite imagery analysis platform that detects an
 
 ## 🚀 Results Showcase
 
-### Vancouver, Canada - 27.5% Vegetation Coverage
-![Vancouver Greenspace Analysis](screenshots/vancouver-results.png)
+<img width="778" height="1229" alt="image" src="https://github.com/user-attachments/assets/00b4df36-87cb-423a-ab73-eb463f468475" />
 
-### Toronto, Canada - 32.2% Vegetation Coverage  
-![Toronto Greenspace Analysis](screenshots/toronto-results.png)
+
+<img width="767" height="1247" alt="image" src="https://github.com/user-attachments/assets/e47d57d0-6e07-44a1-aca5-c9048e1ceb53" />
+
 
 ## 🌳 Enhanced Vegetation Categories
 
