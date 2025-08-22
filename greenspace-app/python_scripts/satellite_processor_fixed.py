@@ -556,8 +556,16 @@ class PerfectAlignmentSatelliteProcessor:
         print_progress(70, "Creating perfectly aligned vegetation analysis...")
         result = self.create_aligned_vegetation_analysis(bands_data, city_bounds)
         
+        # Compute 2020 baseline and percent change (if not already 2020)
+        baseline_2020 = None
+        try:
+            if not (self.start_year == 2020 and self.end_year == 2020):
+                baseline_2020 = self._compute_baseline_2020(city_bounds)
+        except Exception as e:
+            print(f"⚠️ Baseline 2020 computation failed: {e}")
+
         print_progress(90, "Saving results with perfect geographic alignment...")
-        self.save_perfectly_aligned_results(result, city_bounds)
+        self.save_perfectly_aligned_results(result, city_bounds, baseline_2020)
         
         print_progress(100, "Perfect alignment processing completed!")
         return result
@@ -566,7 +574,7 @@ class PerfectAlignmentSatelliteProcessor:
         """Download satellite bands and ensure they're perfectly aligned to city bounds"""
         print_progress(30, "Downloading bands with perfect alignment...")
         
-        bands_needed = ['red', 'green', 'blue', 'nir']
+        bands_needed = ['red', 'green', 'blue', 'nir', 'scl']
         bands_data = {}
         
         # Enhanced target resolution for sub-pixel precision
@@ -584,6 +592,8 @@ class PerfectAlignmentSatelliteProcessor:
             # Get band asset
             if band_name in item.assets:
                 asset = item.assets[band_name]
+            elif band_name == 'scl' and 'SCL' in item.assets:
+                asset = item.assets['SCL']
             else:
                 print(f"   ❌ Band {band_name} not found")
                 continue
@@ -594,9 +604,10 @@ class PerfectAlignmentSatelliteProcessor:
                     with rasterio.open(asset.href) as src:
                         print(f"     📊 Source info: {src.shape}, CRS: {src.crs}, Bands: {src.count}")
                         
-                        # Read a sample to check data
-                        sample = src.read(1, window=rasterio.windows.Window(0, 0, 100, 100))
-                        print(f"     🔍 Sample data: min={sample.min()}, max={sample.max()}, mean={sample.mean():.3f}")
+                        # Read a sample to check data (skip stats for categorical SCL)
+                        if band_name != 'scl':
+                            sample = src.read(1, window=rasterio.windows.Window(0, 0, 100, 100))
+                            print(f"     🔍 Sample data: min={sample.min()}, max={sample.max()}, mean={sample.mean():.3f}")
                         
                         # Get satellite CRS (usually UTM)
                         self.satellite_crs = src.crs
@@ -621,7 +632,7 @@ class PerfectAlignmentSatelliteProcessor:
                         temp_transform = from_bounds(left, bottom, right, top, temp_width, temp_height)
                         
                         # Create high-resolution temporary array for sub-pixel precision
-                        temp_array = np.zeros((temp_height, temp_width), dtype=np.float32)
+                        temp_array = np.zeros((temp_height, temp_width), dtype=(np.float32 if band_name != 'scl' else np.int16))
                         
                         # Reproject with high precision using cubic resampling
                         reproject(
@@ -631,20 +642,21 @@ class PerfectAlignmentSatelliteProcessor:
                             src_crs=src.crs,
                             dst_transform=temp_transform,
                             dst_crs=src.crs,
-                            resampling=Resampling.cubic  # Higher quality resampling
+                            resampling=(Resampling.cubic if band_name != 'scl' else Resampling.nearest)
                         )
                         
                         # Downsample to final resolution with anti-aliasing for precise alignment
                         from scipy.ndimage import zoom
                         scale_factor = 1.0 / precision_factor
-                        output_array = zoom(temp_array, scale_factor, order=3)  # Cubic interpolation
+                        output_array = zoom(temp_array, scale_factor, order=(0 if band_name == 'scl' else 3))
                         
                         # Ensure exact target dimensions
                         if output_array.shape != (target_height, target_width):
                             from scipy.ndimage import resize
                             output_array = zoom(temp_array, (target_height/temp_height, target_width/temp_width), order=3)
                         
-                        print(f"     📈 After reproject: min={output_array.min()}, max={output_array.max()}, mean={output_array.mean():.3f}")
+                        if band_name != 'scl':
+                            print(f"     📈 After reproject: min={output_array.min()}, max={output_array.max()}, mean={output_array.mean():.3f}")
                         
                         bands_data[band_name] = output_array
                     
@@ -669,8 +681,8 @@ class PerfectAlignmentSatelliteProcessor:
             except Exception as e:
                 print(f"   ❌ Failed to download {band_name}: {e}")
                 
-        if len(bands_data) != 4:
-            print(f"❌ Only got {len(bands_data)}/4 required bands")
+        if sum(1 for k in ['red','green','blue','nir'] if k in bands_data) != 4:
+            print(f"❌ Only got {sum(1 for k in ['red','green','blue','nir'] if k in bands_data)}/4 required bands")
             return None
             
         print("✅ All bands downloaded with perfect alignment")
@@ -724,6 +736,15 @@ class PerfectAlignmentSatelliteProcessor:
         # Calculate NDVI
         ndvi = (nir - red) / (nir + red + 1e-10)
         ndvi = np.clip(ndvi, -1, 1)
+        # Apply per-pixel SCL masking if available (exclude clouds/shadows/water)
+        scl = bands_data.get('scl')
+        valid_quality_mask = np.ones_like(ndvi, dtype=bool)
+        if scl is not None:
+            exclude_classes = {0, 1, 3, 6, 8, 9, 10, 11}
+            for cls in exclude_classes:
+                valid_quality_mask &= (scl != cls)
+            ndvi = np.where(valid_quality_mask, ndvi, np.nan)
+            print(f"   ☁️ Applied SCL mask (excluded cloud/shadow/water)")
         
         print(f"   📊 NDVI statistics:")
         print(f"     Min: {ndvi.min():.3f}, Max: {ndvi.max():.3f}, Mean: {ndvi.mean():.3f}")
@@ -740,7 +761,10 @@ class PerfectAlignmentSatelliteProcessor:
         subtle_vegetation = (ndvi >= 0.15) & (ndvi < enhanced_threshold) & city_mask  # Subtle inside city
         
         # Calculate statistics ONLY for pixels inside the city polygon
-        total_city_pixels = np.sum(city_mask)  # Only count pixels inside city
+        if 'scl' in bands_data and valid_quality_mask is not None:
+            total_city_pixels = np.sum(city_mask & valid_quality_mask)
+        else:
+            total_city_pixels = np.sum(city_mask)
         vegetation_pixels = np.sum(vegetation_mask)
         vegetation_percentage = (vegetation_pixels / total_city_pixels) * 100 if total_city_pixels > 0 else 0
         
@@ -787,7 +811,36 @@ class PerfectAlignmentSatelliteProcessor:
             'enhanced_threshold': enhanced_threshold
         }
 
-    def save_perfectly_aligned_results(self, result, city_bounds):
+    def _compute_baseline_2020(self, city_bounds):
+        """Compute vegetation percentage for 2020 using same months and settings."""
+        # Keep same month(s), city, thresholds; only year to 2020
+        year_backup = self.start_year, self.end_year
+        try:
+            self.start_year = 2020
+            self.end_year = 2020
+            # Query and pick best tile as in main flow
+            start_date = datetime(self.start_year, int(self.start_month), 1)
+            end_date = datetime(self.end_year, int(self.end_month), 28)
+            search = self.stac_client.search(
+                collections=["sentinel-2-l2a"],
+                bbox=[city_bounds['west'], city_bounds['south'], city_bounds['east'], city_bounds['north']],
+                datetime=f"{start_date.date()}/{end_date.date()}",
+                query={"eo:cloud_cover": {"lt": self.cloud_threshold}}
+            )
+            items = list(search.items())
+            if not items:
+                return None
+            items.sort(key=lambda x: x.properties.get('eo:cloud_cover', 100))
+            item = items[0]
+            bands_data = self.download_bands_with_perfect_alignment(item, city_bounds)
+            if not bands_data:
+                return None
+            analysis = self.create_aligned_vegetation_analysis(bands_data, city_bounds)
+            return float(analysis['vegetation_percentage'])
+        finally:
+            self.start_year, self.end_year = year_backup
+
+    def save_perfectly_aligned_results(self, result, city_bounds, baseline_2020=None):
         """Save results with perfect geographic alignment"""
         
         # Create enhanced false color composite (NIR, Red, Green) for vegetation visibility
@@ -851,6 +904,10 @@ class PerfectAlignmentSatelliteProcessor:
                 'highlight_alpha': 0.6,
                 'date_range': f"{self.start_year}-{int(self.start_month):02d} to {self.end_year}-{int(self.end_month):02d}"
             },
+            'baseline_vegetation_2020': float(baseline_2020) if baseline_2020 is not None else None,
+            'percent_change_vs_2020': (
+                (float(result['vegetation_percentage']) - float(baseline_2020)) / float(baseline_2020) * 100
+            ) if baseline_2020 not in (None, 0) else None,
             'output_files': [
                 'vegetation_highlighted.png',
                 'ndvi_visualization.png', 

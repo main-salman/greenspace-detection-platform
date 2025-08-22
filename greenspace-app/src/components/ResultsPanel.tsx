@@ -42,6 +42,13 @@ export default function ResultsPanel({ status, selectedCity }: ResultsPanelProps
 
   // Get enhanced summary data
   const summary = result.summary;
+  const annual = (status.result as any)?.annualComparison as {
+    baselineYear: number;
+    baselineVegetation: number;
+    compareYear: number;
+    compareVegetation: number;
+    percentChange: number;
+  } | undefined;
   const hasEnhancedData = summary && summary.processing_config;
 
   const handleDownload = (filePath: string) => {
@@ -97,6 +104,29 @@ export default function ResultsPanel({ status, selectedCity }: ResultsPanelProps
               </div>
             )}
           </div>
+
+          {/* Annual Comparison (if available) */}
+          {annual && (
+            <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+              <h3 className="font-semibold text-gray-800 mb-4">📆 Annual Comparison</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                <div className="bg-gray-50 rounded-lg p-4 text-center">
+                  <div className="text-sm text-gray-600">Baseline {annual.baselineYear}</div>
+                  <div className="text-3xl font-bold text-gray-800">{annual.baselineVegetation.toFixed(1)}%</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-sm text-gray-600">Change</div>
+                  <div className={`text-3xl font-bold ${annual.percentChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {annual.percentChange >= 0 ? '▲' : '▼'} {annual.percentChange.toFixed(1)}%
+                  </div>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-4 text-center">
+                  <div className="text-sm text-gray-600">Compare {annual.compareYear}</div>
+                  <div className="text-3xl font-bold text-gray-800">{annual.compareVegetation.toFixed(1)}%</div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Enhanced Vegetation Density Breakdown */}
           <div className="bg-gradient-to-r from-green-50 to-yellow-50 rounded-lg p-6 mb-6">

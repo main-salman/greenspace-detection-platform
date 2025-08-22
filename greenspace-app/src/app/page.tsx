@@ -13,10 +13,9 @@ export default function Home() {
   const [cities, setCities] = useState<City[]>([]);
   const [selectedCity, setSelectedCity] = useState<City | null>(null);
   const [config, setConfig] = useState<Partial<ProcessingConfig>>({
-    startMonth: '07',
-    startYear: 2020,
-    endMonth: '07',
-    endYear: 2020,
+    annualMode: true,
+    baselineYear: 2020,
+    compareYear: new Date().getFullYear(),
     ndviThreshold: 0.3,
     cloudCoverageThreshold: 20,
     enableVegetationIndices: false,
@@ -25,9 +24,9 @@ export default function Home() {
   const [processingStatus, setProcessingStatus] = useState<ProcessingStatus | null>(null);
   const [isPolling, setIsPolling] = useState(false);
 
-  // Load cities from JSON file
+  // Load cities from root cities.json via API to avoid path confusion
   useEffect(() => {
-    fetch('/cities.json')
+    fetch('/api/cities')
       .then(response => response.json())
       .then(data => setCities(data))
       .catch(error => console.error('Error loading cities:', error));
@@ -48,14 +47,18 @@ export default function Home() {
 
     const fullConfig: ProcessingConfig = {
       city: selectedCity,
-      startMonth: config.startMonth || '07',
-      startYear: config.startYear || 2020,
-      endMonth: config.endMonth || '07',
-      endYear: config.endYear || 2020,
+      // legacy fields retained but unused in annual mode
+      startMonth: config.startMonth,
+      startYear: config.startYear,
+      endMonth: config.endMonth,
+      endYear: config.endYear,
       ndviThreshold: config.ndviThreshold || 0.3,
       cloudCoverageThreshold: config.cloudCoverageThreshold || 20,
       enableVegetationIndices: config.enableVegetationIndices || false,
       enableAdvancedCloudDetection: config.enableAdvancedCloudDetection || false,
+      annualMode: config.annualMode ?? true,
+      baselineYear: config.baselineYear ?? 2020,
+      compareYear: config.compareYear ?? new Date().getFullYear(),
     };
 
     try {
@@ -85,33 +88,46 @@ export default function Home() {
   };
 
   const pollProcessingStatus = async (processingId: string) => {
-    const poll = async () => {
-      try {
-        // Use current window location to avoid port conflicts  
-        const baseUrl = window.location.origin;
-        const response = await fetch(`${baseUrl}/api/status/${processingId}`);
-        
-        if (!response.ok) {
-          console.error('Failed to fetch status');
-          return;
+    // Prefer SSE stream; fallback to polling
+    try {
+      const baseUrl = window.location.origin;
+      const es = new EventSource(`${baseUrl}/api/status/stream/${processingId}`);
+      es.onmessage = (e) => {
+        try {
+          const status: ProcessingStatus = JSON.parse(e.data);
+          setProcessingStatus(status);
+          if (status.status === 'completed' || status.status === 'failed') {
+            es.close();
+            setIsPolling(false);
+          }
+        } catch (err) {
+          console.warn('Bad SSE payload', err);
         }
-
-        const status: ProcessingStatus = await response.json();
-        setProcessingStatus(status);
-
-        // Continue polling if not completed or failed
-        if (status.status !== 'completed' && status.status !== 'failed') {
-          setTimeout(poll, 2000); // Poll every 2 seconds
-        } else {
-          setIsPolling(false);
-        }
-      } catch (error) {
-        console.error('Error polling status:', error);
-        setIsPolling(false);
-      }
-    };
-
-    poll();
+      };
+      es.onerror = () => {
+        es.close();
+        // Fallback to polling
+        const poll = async () => {
+          try {
+            const resp = await fetch(`${baseUrl}/api/status/${processingId}`);
+            if (!resp.ok) return;
+            const status: ProcessingStatus = await resp.json();
+            setProcessingStatus(status);
+            if (status.status !== 'completed' && status.status !== 'failed') {
+              setTimeout(poll, 2000);
+            } else {
+              setIsPolling(false);
+            }
+          } catch (e) {
+            console.error('Error polling status:', e);
+            setIsPolling(false);
+          }
+        };
+        poll();
+      };
+    } catch (e) {
+      console.warn('SSE unavailable, using polling');
+    }
   };
 
   const isProcessing = processingStatus?.status && 

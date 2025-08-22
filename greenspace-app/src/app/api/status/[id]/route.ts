@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getProcessingJob, getAllProcessingJobIds } from '@/lib/processing-store';
+import path from 'path';
+import { promises as fs } from 'fs';
 
 export async function GET(
   request: NextRequest,
@@ -10,7 +12,22 @@ export async function GET(
     console.log(`Status request for ID: ${processingId}`);
     console.log(`Available job IDs: ${getAllProcessingJobIds().join(', ')}`);
     
-    const status = getProcessingJob(processingId);
+    let status = getProcessingJob(processingId);
+
+    if (!status) {
+      // Fallback: try file-backed status from output directory
+      try {
+        const statusPath = path.join(process.cwd(), 'public', 'outputs', processingId, 'status.json');
+        const exists = await fs.access(statusPath).then(() => true).catch(() => false);
+        if (exists) {
+          const content = await fs.readFile(statusPath, 'utf-8');
+          status = JSON.parse(content);
+          console.log(`Loaded file-backed status for ${processingId}`);
+        }
+      } catch (e) {
+        console.error('Error reading file-backed status:', e);
+      }
+    }
 
     if (!status) {
       console.log(`Processing job ${processingId} not found`);
