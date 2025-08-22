@@ -10,9 +10,9 @@ export async function POST(request: NextRequest) {
   try {
     const config: ProcessingConfig = await request.json();
     
-    if (!config.city) {
+    if (!config.city && !(config.cities && config.cities.length)) {
       return NextResponse.json(
-        { error: 'City is required' },
+        { error: 'City or cities are required' },
         { status: 400 }
       );
     }
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     };
     
     setProcessingJob(processingId, status);
-    console.log(`Created processing job ${processingId} for ${config.city.city}`);
+    console.log(`Created processing job ${processingId} for ${config.city?.city || (config.cities ? config.cities.length + ' cities' : 'unknown')}`);
 
     // Start processing asynchronously
     processInBackground(processingId, config);
@@ -62,6 +62,144 @@ async function processInBackground(processingId: string, config: ProcessingConfi
     });
 
     // Annual comparison mode: run two annual analyses (baseline and compare)
+    if (config.annualMode && config.cities && config.cities.length) {
+      // Multi-city batch annual comparison (sequential to limit load)
+      const baselineYear = config.baselineYear ?? 2020;
+      const compareYear = config.compareYear ?? baselineYear;
+      const batchSummaries: any[] = [];
+
+      async function runMonthForCity(city: any, year: number, month: number, label: string) {
+        const mm = month.toString().padStart(2, '0');
+        const monthDir = path.join(outputDir, city.city.replace(/\s+/g, '_'), label, mm);
+        await fs.mkdir(monthDir, { recursive: true });
+        const configPathMonth = path.join(monthDir, 'config.json');
+        await fs.writeFile(configPathMonth, JSON.stringify({
+          city,
+          startMonth: mm,
+          startYear: year,
+          endMonth: mm,
+          endYear: year,
+          ndviThreshold: config.ndviThreshold,
+          cloudCoverageThreshold: config.cloudCoverageThreshold,
+          enableVegetationIndices: config.enableVegetationIndices,
+          enableAdvancedCloudDetection: config.enableAdvancedCloudDetection,
+          outputDir: monthDir
+        }, null, 2));
+        await runPythonScript('satellite_processor_fixed.py', configPathMonth, processingId);
+        const res = await collectResults(monthDir);
+        const s: any = res.summary || {};
+        // Emit incremental preview appended to shared previews list
+        const job = getProcessingJob(processingId);
+        const existingPreviews = (job?.result as any)?.previews || [];
+        const thumb = (res.outputFiles || []).find((f: string) => f.endsWith('vegetation_highlighted.png')) || (res.outputFiles || [])[0] || '';
+        const newPreview = thumb ? { label: `${city.city} ${label} ${year}-${mm}`, image: thumb, month, year, type: label==='baseline'?'baseline':'compare', veg: res.vegetationPercentage || 0, cloud: s.cloud_excluded_percentage || 0, highPct: s.high_density_percentage || 0, medPct: s.medium_density_percentage || 0, lowPct: s.low_density_percentage || 0, cityName: city.city } : null;
+        if (newPreview) {
+          updateProcessingJob(processingId, {
+            status: 'processing',
+            message: `${city.city} ${label} ${year}-${mm} completed`,
+            result: {
+              ...(job?.result as any),
+              previews: [...existingPreviews, newPreview]
+            } as any
+          });
+          try {
+            const statusPath = path.join(outputDir, 'status.json');
+            await fs.writeFile(statusPath, JSON.stringify(getProcessingJob(processingId), null, 2));
+          } catch {}
+        }
+        return {
+          veg: res.vegetationPercentage || 0,
+          ndviMean: s.ndvi_mean || 0,
+          highPct: s.high_density_percentage || 0,
+          medPct: s.medium_density_percentage || 0,
+          lowPct: s.low_density_percentage || 0,
+          cloud: s.cloud_excluded_percentage || 0
+        };
+      }
+
+      for (const city of config.cities) {
+        const baseMonthly: any[] = [];
+        const compMonthly: any[] = [];
+        for (let m = 1; m <= 12; m++) {
+          try {
+            baseMonthly.push(await runMonthForCity(city, baselineYear, m, 'baseline'));
+          } catch {}
+        }
+        for (let m = 1; m <= 12; m++) {
+          try {
+            compMonthly.push(await runMonthForCity(city, compareYear, m, 'compare'));
+          } catch {}
+        }
+        const avg = (arr: number[]) => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
+        const baselineVegetation = avg(baseMonthly.map(x=>x.veg));
+        const compareVegetation = avg(compMonthly.map(x=>x.veg));
+        const percentChange = baselineVegetation!==0 ? ((compareVegetation-baselineVegetation)/baselineVegetation)*100 : 0;
+        const highPct = avg(compMonthly.map(x=>x.highPct));
+        const medPct = avg(compMonthly.map(x=>x.medPct));
+        const lowPct = avg(compMonthly.map(x=>x.lowPct));
+        const cloudExcludedPct = avg(compMonthly.map(x=>x.cloud));
+        batchSummaries.push({
+          city,
+          baselineYear,
+          compareYear,
+          baselineVegetation,
+          compareVegetation,
+          percentChange,
+          monthlyNdviMeanBaseline: baseMonthly.map(x=>x.ndviMean),
+          monthlyNdviMeanCompare: compMonthly.map(x=>x.ndviMean),
+          monthlyVegBaseline: baseMonthly.map(x=>x.veg),
+          monthlyVegCompare: compMonthly.map(x=>x.veg),
+          highPct,
+          medPct,
+          lowPct,
+          cloudExcludedPct,
+          vegetationPct: compareVegetation
+        });
+        // Persist intermediate batch status
+        updateProcessingJob(processingId, {
+          status: 'processing',
+          progress: Math.min(95, Math.round((batchSummaries.length / config.cities.length) * 95)),
+          message: `Completed ${batchSummaries.length}/${config.cities.length} cities`,
+          result: {
+            downloadedImages: 0,
+            processedComposites: 0,
+            vegetationPercentage: 0,
+            highDensityPercentage: 0,
+            mediumDensityPercentage: 0,
+            lowDensityPercentage: 0,
+            outputFiles: [],
+            summary: undefined,
+            annualComparison: undefined,
+            batchSummaries
+          } as any
+        });
+        try {
+          const statusPath = path.join(outputDir, 'status.json');
+          await fs.writeFile(statusPath, JSON.stringify(getProcessingJob(processingId), null, 2));
+        } catch {}
+      }
+
+      updateProcessingJob(processingId, {
+        status: 'completed',
+        progress: 100,
+        message: 'Batch annual comparison completed!',
+        endTime: new Date(),
+        result: {
+          downloadedImages: 0,
+          processedComposites: 0,
+          vegetationPercentage: 0,
+          highDensityPercentage: 0,
+          mediumDensityPercentage: 0,
+          lowDensityPercentage: 0,
+          outputFiles: [],
+          summary: undefined,
+          annualComparison: undefined,
+          batchSummaries
+        } as any
+      });
+      return;
+    }
+
     if (config.annualMode) {
       const baselineYear = config.baselineYear ?? 2020;
       const compareYear = config.compareYear ?? baselineYear;
@@ -93,7 +231,8 @@ async function processInBackground(processingId: string, config: ProcessingConfi
         const previewImage = (res.outputFiles || []).find((f: string) => f.endsWith('vegetation_highlighted.png'))
           || (res.outputFiles || []).find((f: string) => f.endsWith('ndvi_visualization.png'))
           || '';
-        return { res, preview: previewImage ? { label: `${label} ${year}-${mm}`, image: previewImage, month, year, type: label === 'baseline' ? 'baseline' : 'compare', veg: res.vegetationPercentage || 0 } : null };
+        const s = res.summary || {} as any;
+        return { res, preview: previewImage ? { label: `${label} ${year}-${mm}`, image: previewImage, month, year, type: label === 'baseline' ? 'baseline' : 'compare', veg: res.vegetationPercentage || 0, cloud: s.cloud_excluded_percentage || 0, highPct: s.high_density_percentage || 0, medPct: s.medium_density_percentage || 0, lowPct: s.low_density_percentage || 0 } : null };
       }
 
       async function runYearMonthly(year: number, label: string) {

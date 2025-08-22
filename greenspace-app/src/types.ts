@@ -19,7 +19,8 @@ export interface City {
 }
 
 export interface ProcessingConfig {
-  city: City;
+  city?: City; // legacy single-city
+  cities?: City[]; // new multi-city
   // Legacy fields (kept for compatibility)
   startMonth?: string;
   startYear?: number;
@@ -85,6 +86,22 @@ export interface AnnualComparison {
   percentChange: number; // positive = gain, negative = loss
 }
 
+export interface CityAnnualSummary extends AnnualComparison {
+  city: City;
+  // Monthly arrays length 12 (may be shorter if failures)
+  monthlyNdviMeanBaseline?: number[];
+  monthlyNdviMeanCompare?: number[];
+  monthlyVegBaseline?: number[];
+  monthlyVegCompare?: number[];
+  // Annual density shares (averaged across months)
+  highPct?: number;
+  medPct?: number;
+  lowPct?: number;
+  // Cloud coverage excluded (averaged across months)
+  cloudExcludedPct?: number;
+  vegetationPct?: number; // compare year vegetation
+}
+
 export interface ProcessingStatus {
   id: string;
   status: 'pending' | 'downloading' | 'preprocessing' | 'processing' | 'completed' | 'failed';
@@ -103,7 +120,8 @@ export interface ProcessingStatus {
     outputFiles: string[];
     summary?: VegetationSummary; // Enhanced summary data (single run)
     annualComparison?: AnnualComparison; // Annual comparison summary when annualMode
-    previews?: { label: string; image: string; month: number; year: number; type: 'baseline' | 'compare' }[]; // monthly previews
+    previews?: { label: string; image: string; month: number; year: number; type: 'baseline' | 'compare'; veg?: number; cloud?: number; highPct?: number; medPct?: number; lowPct?: number; cityName?: string }[]; // monthly previews
+    batchSummaries?: CityAnnualSummary[]; // multi-city summaries
   };
 }
 
