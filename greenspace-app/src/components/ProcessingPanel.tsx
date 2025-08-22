@@ -118,61 +118,68 @@ export default function ProcessingPanel({ status }: ProcessingPanelProps) {
         </div>
       </div>
 
-      {/* Month Timeline */}
-      {status.result?.previews && (
-        <div className="mt-6">
-          <h4 className="font-semibold text-gray-700 mb-2">Monthly Progress</h4>
-          <div className="grid grid-cols-12 gap-1 text-center text-xs">
-            {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => {
-              const hasBaseline = status.result?.previews?.some((p) => p.month === m && p.type === 'baseline');
-              const hasCompare = status.result?.previews?.some((p) => p.month === m && p.type === 'compare');
-              const state = hasBaseline && hasCompare ? 'both' : hasBaseline ? 'baseline' : hasCompare ? 'compare' : 'none';
-              const bg = state === 'both' ? 'bg-green-500' : state === 'baseline' ? 'bg-green-300' : state === 'compare' ? 'bg-blue-300' : 'bg-gray-200';
-              return (
-                <div key={m} className="flex flex-col items-center">
-                  <div className={`w-full h-2 rounded ${bg}`}></div>
-                  <div className="mt-1 text-gray-600">{m}</div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Live Previews (monthly) */}
+      {/* Grouped by City: Month Timeline + Live Previews */}
       {status.result?.previews && status.result.previews.length > 0 && (
-        <div className="mt-6">
-          <h4 className="font-semibold text-gray-700 mb-3">Live Monthly Previews</h4>
+        <div className="mt-6 space-y-8">
           {(() => {
             const previews = status.result?.previews || [];
-            const ordered: typeof previews = [] as any;
-            for (let m = 1; m <= 12; m++) {
-              const b = previews.find(p => p.month === m && p.type === 'baseline');
-              const c = previews.find(p => p.month === m && p.type === 'compare');
-              if (b) ordered.push(b as any);
-              if (c) ordered.push(c as any);
+            const groups: Record<string, typeof previews> = {};
+            for (const p of previews) {
+              const cityKey = (p as any).cityName || 'Selected City';
+              if (!groups[cityKey]) groups[cityKey] = [] as any;
+              groups[cityKey].push(p as any);
             }
-            return (
-              <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
-                {ordered.map((p, idx) => (
-                  <div key={idx} className="border border-gray-200 rounded overflow-hidden bg-gray-50 cursor-pointer" onClick={() => {
-                    const month = p.month;
-                    const baseline = previews.find(x => x.month===month && x.type==='baseline')?.image;
-                    const compare = previews.find(x => x.month===month && x.type==='compare')?.image;
-                    setCompareModal({ month, baseline, compare });
-                  }}>
-                    <div className="text-xs text-gray-600 px-2 py-1 border-b flex justify-between"><span>{p.label}</span><span className={p.type==='baseline'?'text-green-700':'text-blue-700'}>{p.type}</span></div>
-                    <img
-                      src={`/api/preview?file=${encodeURIComponent(p.image)}`}
-                      alt={p.label}
-                      className="w-full h-28 object-cover"
-                    />
+            const cityNames = Object.keys(groups).sort();
+            return cityNames.map((cityName) => {
+              const cityPreviews = groups[cityName];
+              return (
+                <div key={cityName}>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-semibold text-gray-800">{cityName}</h4>
+                    <span className="text-xs text-gray-500">1 thumbnail per month (prefer compare, else baseline)</span>
                   </div>
-                ))}
-              </div>
-            );
+                  <div className="grid grid-cols-12 gap-1 text-center text-xs mb-3">
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => {
+                      const hasBaseline = cityPreviews.some((p) => p.month === m && p.type === 'baseline');
+                      const hasCompare = cityPreviews.some((p) => p.month === m && p.type === 'compare');
+                      const state = hasBaseline && hasCompare ? 'both' : hasBaseline ? 'baseline' : hasCompare ? 'compare' : 'none';
+                      const bg = state === 'both' ? 'bg-green-500' : state === 'baseline' ? 'bg-green-300' : state === 'compare' ? 'bg-blue-300' : 'bg-gray-200';
+                      return (
+                        <div key={m} className="flex flex-col items-center">
+                          <div className={`w-full h-2 rounded ${bg}`}></div>
+                          <div className="mt-1 text-gray-600">{m}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => {
+                      const pref = cityPreviews.find(p => p.month === m && p.type === 'compare') || cityPreviews.find(p => p.month === m && p.type === 'baseline');
+                      if (!pref) {
+                        return (
+                          <div key={m} className="border border-dashed border-gray-200 rounded bg-white h-32 flex items-center justify-center text-xs text-gray-400">
+                            Month {m}
+                          </div>
+                        );
+                      }
+                      const baseline = cityPreviews.find(x => x.month===m && x.type==='baseline')?.image;
+                      const compare = cityPreviews.find(x => x.month===m && x.type==='compare')?.image;
+                      return (
+                        <div key={m} className="border border-gray-200 rounded overflow-hidden bg-gray-50 cursor-pointer" onClick={() => setCompareModal({ month: m, baseline, compare })}>
+                          <div className="text-xs text-gray-600 px-2 py-1 border-b flex justify-between"><span>{pref.label}</span><span className={pref.type==='baseline'?'text-green-700':'text-blue-700'}>{pref.type}</span></div>
+                          <img
+                            src={`/api/preview?file=${encodeURIComponent(pref.image)}`}
+                            alt={pref.label}
+                            className="w-full h-28 object-cover"
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            });
           })()}
-          <p className="text-xs text-gray-500 mt-2">Showing up to 24 thumbnails (12 baseline + 12 compare). Click any month to open side‑by‑side.</p>
         </div>
       )}
 
@@ -195,15 +202,15 @@ export default function ProcessingPanel({ status }: ProcessingPanelProps) {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="bg-gray-50 p-4 rounded text-center">
                   <div className="text-sm text-gray-600">Baseline avg (so far)</div>
-                  <div className="text-2xl font-bold text-gray-800">{baseAvg.toFixed(1)}%</div>
+                  <div className="text-2xl font-bold text-gray-800">{Number(baseAvg ?? 0).toFixed(1)}%</div>
                 </div>
                 <div className="text-center flex flex-col justify-center">
                   <div className="text-sm text-gray-600">Change (so far)</div>
-                  <div className={`text-2xl font-bold ${delta>=0?'text-green-600':'text-red-600'}`}>{delta>=0?'▲':'▼'} {delta.toFixed(1)}%</div>
+                  <div className={`text-2xl font-bold ${delta>=0?'text-green-600':'text-red-600'}`}>{delta>=0?'▲':'▼'} {Number(delta ?? 0).toFixed(1)}%</div>
                 </div>
                 <div className="bg-gray-50 p-4 rounded text-center">
                   <div className="text-sm text-gray-600">Compare avg (so far)</div>
-                  <div className="text-2xl font-bold text-gray-800">{compAvg.toFixed(1)}%</div>
+                  <div className="text-2xl font-bold text-gray-800">{Number(compAvg ?? 0).toFixed(1)}%</div>
                 </div>
               </div>
             );
@@ -260,7 +267,7 @@ export default function ProcessingPanel({ status }: ProcessingPanelProps) {
             <div className="col-span-2">
               <span className="text-gray-600">Vegetation Coverage:</span>
               <span className="font-medium ml-2 text-green-600">
-                {status.result.vegetationPercentage.toFixed(1)}%
+                {Number(status.result?.vegetationPercentage ?? 0).toFixed(1)}%
               </span>
             </div>
           </div>

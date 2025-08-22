@@ -12,6 +12,7 @@ export default function Home() {
 
   const [cities, setCities] = useState<City[]>([]);
   const [selectedCity, setSelectedCity] = useState<City | null>(null);
+  const [selectedCities, setSelectedCities] = useState<City[]>([]);
   const [config, setConfig] = useState<Partial<ProcessingConfig>>({
     annualMode: true,
     baselineYear: 2020,
@@ -40,13 +41,14 @@ export default function Home() {
   }, [selectedCity]);
 
   const handleStartProcessing = async () => {
-    if (!selectedCity) {
-      alert('Please select a city first');
+    if (!selectedCity && selectedCities.length === 0) {
+      alert('Please select at least one city');
       return;
     }
 
     const fullConfig: ProcessingConfig = {
-      city: selectedCity,
+      city: selectedCity || undefined,
+      cities: selectedCities.length ? selectedCities : undefined,
       // legacy fields retained but unused in annual mode
       startMonth: config.startMonth,
       startYear: config.startYear,
@@ -156,10 +158,14 @@ export default function Home() {
                   cities={cities}
                   selectedCity={selectedCity}
                   onCitySelect={setSelectedCity}
+                  multiSelect={true}
+                  selectedCities={selectedCities}
+                  onCitiesChange={setSelectedCities}
                 />
                 
                 <ConfigurationPanel
                   selectedCity={selectedCity}
+                  selectedCities={selectedCities}
                   config={config}
                   onConfigChange={setConfig}
                   onStartProcessing={handleStartProcessing}

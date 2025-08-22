@@ -763,8 +763,11 @@ class PerfectAlignmentSatelliteProcessor:
         # Calculate statistics ONLY for pixels inside the city polygon
         if 'scl' in bands_data and valid_quality_mask is not None:
             total_city_pixels = np.sum(city_mask & valid_quality_mask)
+            cloud_excluded_pixels = np.sum(city_mask & ~valid_quality_mask)
+            cloud_excluded_percentage = (cloud_excluded_pixels / (np.sum(city_mask) or 1)) * 100.0
         else:
             total_city_pixels = np.sum(city_mask)
+            cloud_excluded_percentage = 0.0
         vegetation_pixels = np.sum(vegetation_mask)
         vegetation_percentage = (vegetation_pixels / total_city_pixels) * 100 if total_city_pixels > 0 else 0
         
@@ -801,6 +804,8 @@ class PerfectAlignmentSatelliteProcessor:
             'high_density_percentage': high_percentage,
             'medium_density_percentage': medium_percentage,
             'low_density_percentage': low_percentage,
+            'ndvi_mean': float(np.nanmean(ndvi)) if np.any(np.isfinite(ndvi)) else 0.0,
+            'cloud_excluded_percentage': float(cloud_excluded_percentage),
             'subtle_percentage': subtle_percentage,
             'high_density': high_density,
             'medium_density': medium_density,
@@ -887,6 +892,7 @@ class PerfectAlignmentSatelliteProcessor:
             'high_density_percentage': float(result['high_density_percentage']),
             'medium_density_percentage': float(result['medium_density_percentage']),
             'low_density_percentage': float(result['low_density_percentage']),
+            'ndvi_mean': float(result.get('ndvi_mean', 0.0)),
             'total_pixels': int(result['total_pixels']),
             'vegetation_pixels': int(result['vegetation_pixels']),
             'images_processed': 1,
@@ -908,6 +914,7 @@ class PerfectAlignmentSatelliteProcessor:
             'percent_change_vs_2020': (
                 (float(result['vegetation_percentage']) - float(baseline_2020)) / float(baseline_2020) * 100
             ) if baseline_2020 not in (None, 0) else None,
+            'cloud_excluded_percentage': float(result.get('cloud_excluded_percentage', 0.0)),
             'output_files': [
                 'vegetation_highlighted.png',
                 'ndvi_visualization.png', 

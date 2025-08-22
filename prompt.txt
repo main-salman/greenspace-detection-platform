@@ -56,3 +56,13 @@ here are some guidelines to consider:
 -   Lazy loading for image components
 -   Compression for satellite imagery
 
+
+
+
+ modify so that any number of cities can be analyzed. Summary of the analysis should be provided in a chart that includes: baseline percentage, change in percentage, ndvi scores by month, ndvi score ranges 
+High Density (NDVI > 0.6)
+Medium Density (NDVI 0.4-0.6)
+Low Density (NDVI 0.2-0.4), total cloud coverage in the analyzed results,  and percent total vegetation. 
+
+
+

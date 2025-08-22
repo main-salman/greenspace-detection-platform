@@ -7,9 +7,12 @@ interface CitySelectorProps {
   cities: City[];
   selectedCity: City | null;
   onCitySelect: (city: City) => void;
+  multiSelect?: boolean;
+  selectedCities?: City[];
+  onCitiesChange?: (cities: City[]) => void;
 }
 
-export default function CitySelector({ cities, selectedCity, onCitySelect }: CitySelectorProps) {
+export default function CitySelector({ cities, selectedCity, onCitySelect, multiSelect = false, selectedCities = [], onCitiesChange }: CitySelectorProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCountry, setSelectedCountry] = useState('');
 
@@ -69,8 +72,8 @@ export default function CitySelector({ cities, selectedCity, onCitySelect }: Cit
         </div>
       </div>
 
-      {/* Selected City Display */}
-      {selectedCity && (
+      {/* Selected City/ Cities Display */}
+      {(!multiSelect && selectedCity) && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
           <h3 className="font-semibold text-green-800 mb-2">Selected City</h3>
           <div className="text-sm text-green-700">
@@ -79,6 +82,20 @@ export default function CitySelector({ cities, selectedCity, onCitySelect }: Cit
             <p className="text-xs mt-1">
               📍 {parseFloat(selectedCity.latitude).toFixed(4)}, {parseFloat(selectedCity.longitude).toFixed(4)}
             </p>
+          </div>
+        </div>
+      )}
+
+      {multiSelect && selectedCities.length > 0 && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+          <h3 className="font-semibold text-green-800 mb-2">Selected Cities ({selectedCities.length})</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-green-700">
+            {selectedCities.map(c => (
+              <div key={c.city_id} className="flex items-center justify-between">
+                <span><strong>{c.city}</strong>, {c.state_province}, {c.country}</span>
+                <button className="text-xs text-red-600" onClick={() => onCitiesChange && onCitiesChange(selectedCities.filter(x => x.city_id !== c.city_id))}>Remove</button>
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -94,9 +111,17 @@ export default function CitySelector({ cities, selectedCity, onCitySelect }: Cit
             {filteredCities.map((city) => (
               <button
                 key={city.city_id}
-                onClick={() => onCitySelect(city)}
+                onClick={() => {
+                  if (multiSelect) {
+                    const exists = selectedCities.some(c => c.city_id === city.city_id);
+                    const next = exists ? selectedCities.filter(c => c.city_id !== city.city_id) : [...selectedCities, city];
+                    onCitiesChange && onCitiesChange(next);
+                  } else {
+                    onCitySelect(city);
+                  }
+                }}
                 className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors ${
-                  selectedCity?.city_id === city.city_id ? 'bg-green-50 border-l-4 border-green-500' : ''
+                  (!multiSelect && selectedCity?.city_id === city.city_id) || (multiSelect && selectedCities.some(c => c.city_id === city.city_id)) ? 'bg-green-50 border-l-4 border-green-500' : ''
                 }`}
               >
                 <div className="font-medium text-gray-900">{city.city}</div>

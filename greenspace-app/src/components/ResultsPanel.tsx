@@ -4,6 +4,7 @@ import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { ProcessingStatus } from '@/types';
 import { City } from '@/types';
+import SummaryPanel from './SummaryPanel';
 
 // Dynamic import to prevent SSR issues with Leaflet
 const VegetationMap = dynamic(() => import('./VegetationMap'), {
@@ -65,7 +66,7 @@ export default function ResultsPanel({ status, selectedCity }: ResultsPanelProps
     setSelectedImage(filePath);
   };
 
-  if (!selectedCity) return null;
+  // Always show results section so batch summaries render even without a single selected city
 
   return (
     <div className="space-y-6" style={{ maxWidth: 'none', width: '100%' }}>
@@ -334,6 +335,11 @@ export default function ResultsPanel({ status, selectedCity }: ResultsPanelProps
               </div>
             )}
           </div>
+
+          {/* Batch Summary for Multi-City */}
+          {status.result?.batchSummaries && status.result.batchSummaries.length > 0 && (
+            <SummaryPanel summaries={status.result.batchSummaries as any} />
+          )}
 
           {/* Enhanced Vegetation Analysis Insights */}
           <div className="bg-green-50 border border-green-200 rounded-lg p-6">

@@ -5,6 +5,7 @@ import { ProcessingConfig, City } from '@/types';
 
 interface ConfigurationPanelProps {
   selectedCity: City | null;
+  selectedCities?: City[];
   config: Partial<ProcessingConfig>;
   onConfigChange: (config: Partial<ProcessingConfig>) => void;
   onStartProcessing: () => void;
@@ -13,6 +14,7 @@ interface ConfigurationPanelProps {
 
 export default function ConfigurationPanel({
   selectedCity,
+  selectedCities = [],
   config,
   onConfigChange,
   onStartProcessing,
@@ -25,17 +27,21 @@ export default function ConfigurationPanel({
     <div className="bg-white rounded-lg shadow-md p-6">
       <h2 className="text-xl font-semibold mb-4 text-gray-800">Processing Configuration</h2>
       
-      {!selectedCity && (
+      {(!selectedCity && selectedCities.length === 0) && (
         <div className="text-center py-8 text-gray-500">
           Please select a city first
         </div>
       )}
 
-      {selectedCity && (
+      {(selectedCity || selectedCities.length > 0) && (
         <div className="space-y-6">
           <div className="bg-blue-50 p-4 rounded-lg">
-            <h3 className="font-medium text-blue-900">Selected City</h3>
-            <p className="text-blue-700">{selectedCity.city}, {selectedCity.state_province}, {selectedCity.country}</p>
+            <h3 className="font-medium text-blue-900">{selectedCities.length > 0 ? `Selected Cities (${selectedCities.length})` : 'Selected City'}</h3>
+            {selectedCities.length > 0 ? (
+              <p className="text-blue-700 text-sm">Batch mode enabled. Annual comparison will run for all selected cities.</p>
+            ) : (
+              <p className="text-blue-700">{selectedCity?.city}, {selectedCity?.state_province}, {selectedCity?.country}</p>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
