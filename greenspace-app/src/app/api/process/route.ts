@@ -107,13 +107,18 @@ async function processInBackground(processingId: string, config: ProcessingConfi
             await fs.writeFile(statusPath, JSON.stringify(getProcessingJob(processingId), null, 2));
           } catch {}
         }
+        // Derive hectares if possible from pixel counts and known pixel size
+        // Default Sentinel-2 10m resolution -> 100 m^2 per pixel -> 0.01 hectares
+        const vegetationPixels = s.vegetation_pixels || 0;
+        const hectares = vegetationPixels * 0.01;
         return {
           veg: res.vegetationPercentage || 0,
           ndviMean: s.ndvi_mean || 0,
           highPct: s.high_density_percentage || 0,
           medPct: s.medium_density_percentage || 0,
           lowPct: s.low_density_percentage || 0,
-          cloud: s.cloud_excluded_percentage || 0
+          cloud: s.cloud_excluded_percentage || 0,
+          hectares
         };
       }
 
@@ -149,6 +154,8 @@ async function processInBackground(processingId: string, config: ProcessingConfi
           monthlyNdviMeanCompare: compMonthly.map(x=>x.ndviMean),
           monthlyVegBaseline: baseMonthly.map(x=>x.veg),
           monthlyVegCompare: compMonthly.map(x=>x.veg),
+          monthlyHectaresBaseline: baseMonthly.map(x=>x.hectares||0),
+          monthlyHectaresCompare: compMonthly.map(x=>x.hectares||0),
           highPct,
           medPct,
           lowPct,

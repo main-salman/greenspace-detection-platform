@@ -93,6 +93,9 @@ export interface CityAnnualSummary extends AnnualComparison {
   monthlyNdviMeanCompare?: number[];
   monthlyVegBaseline?: number[];
   monthlyVegCompare?: number[];
+  // Monthly vegetation hectares (derived from vegetation pixel count)
+  monthlyHectaresBaseline?: number[];
+  monthlyHectaresCompare?: number[];
   // Annual density shares (averaged across months)
   highPct?: number;
   medPct?: number;

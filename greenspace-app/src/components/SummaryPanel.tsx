@@ -26,6 +26,31 @@ export default function SummaryPanel({ summaries }: SummaryPanelProps) {
     URL.revokeObjectURL(url);
   };
 
+  const downloadDetailedCSV = () => {
+    const headers = [
+      'city','country','year','month','ndvi_mean','vegetation_pct','vegetation_hectares'
+    ];
+    const toRows = (s: CityAnnualSummary, label: 'baseline'|'compare') => {
+      const ndvi = label==='baseline' ? (s.monthlyNdviMeanBaseline||[]) : (s.monthlyNdviMeanCompare||[]);
+      const veg = label==='baseline' ? (s.monthlyVegBaseline||[]) : (s.monthlyVegCompare||[]);
+      const hect = label==='baseline' ? (s.monthlyHectaresBaseline||[]) : (s.monthlyHectaresCompare||[]);
+      const year = label==='baseline' ? s.baselineYear : s.compareYear;
+      return Array.from({length:12}, (_,i)=>i).map(m => [
+        s.city.city, s.city.country, year, m+1,
+        (ndvi[m] ?? '').toString(),
+        (veg[m] ?? '').toString(),
+        (hect[m] ?? '').toString()
+      ].join(','));
+    };
+    const rows = summaries.flatMap(s => [...toRows(s, 'baseline'), ...toRows(s, 'compare')]);
+    const csv = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'greenspace_detailed_monthly.csv'; a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const Chart = ({ s }: { s: CityAnnualSummary }) => {
     const months = Array.from({length:12}, (_,i)=>i);
     const ndviBase = s.monthlyNdviMeanBaseline || [];
@@ -58,7 +83,10 @@ export default function SummaryPanel({ summaries }: SummaryPanelProps) {
     <div className="bg-white rounded-lg shadow-md p-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-gray-800">📈 Multi‑City Annual Summary</h3>
-        <button onClick={downloadCSV} className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">Download CSV</button>
+        <div className="flex items-center gap-2">
+          <button onClick={downloadCSV} className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">Download CSV</button>
+          <button onClick={downloadDetailedCSV} className="px-3 py-1 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700">Download Detailed CSV</button>
+        </div>
       </div>
 
       <div className="overflow-x-auto">
