@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { spawn } from 'child_process';
-import { setProcessingJob, updateProcessingJob } from '@/lib/processing-store';
+import { setProcessingJob, updateProcessingJob, getProcessingJob } from '@/lib/processing-store';
 
 export async function POST(request: NextRequest) {
   try {
@@ -61,40 +61,160 @@ async function processInBackground(processingId: string, config: ProcessingConfi
       message: 'Initializing satellite processing...'
     });
 
-    // Save configuration for Python script
-    const configPath = path.join(outputDir, 'config.json');
-    await fs.writeFile(configPath, JSON.stringify({
-      city: config.city,
-      startMonth: config.startMonth,
-      startYear: config.startYear,
-      endMonth: config.endMonth,
-      endYear: config.endYear,
-      ndviThreshold: config.ndviThreshold,
-      cloudCoverageThreshold: config.cloudCoverageThreshold,
-      enableVegetationIndices: config.enableVegetationIndices,
-      enableAdvancedCloudDetection: config.enableAdvancedCloudDetection,
-      outputDir: outputDir
-    }, null, 2));
-    console.log(`Saved config to: ${configPath}`);
+    // Annual comparison mode: run two annual analyses (baseline and compare)
+    if (config.annualMode) {
+      const baselineYear = config.baselineYear ?? 2020;
+      const compareYear = config.compareYear ?? baselineYear;
+      const totalMonths = 24; // 12 baseline + 12 compare
+      let completedMonths = 0;
 
-    // Run the optimized satellite processor (single script)
-    console.log('Running optimized satellite processor...');
-    await runPythonScript('satellite_processor_fixed.py', configPath, processingId);
+      // Helper to run one month using single best scene selection (fixed script)
+      async function runMonth(year: number, month: number, label: string) {
+        const mm = month.toString().padStart(2, '0');
+        const monthDir = path.join(outputDir, label, mm);
+        await fs.mkdir(monthDir, { recursive: true });
+        const configPathMonth = path.join(monthDir, 'config.json');
+        await fs.writeFile(configPathMonth, JSON.stringify({
+          city: config.city,
+          startMonth: mm,
+          startYear: year,
+          endMonth: mm,
+          endYear: year,
+          ndviThreshold: config.ndviThreshold,
+          cloudCoverageThreshold: config.cloudCoverageThreshold,
+          enableVegetationIndices: config.enableVegetationIndices,
+          enableAdvancedCloudDetection: config.enableAdvancedCloudDetection,
+          outputDir: monthDir
+        }, null, 2));
+        console.log(`Running monthly processor for ${label} ${year}-${mm} (best scene per month)...`);
+        await runPythonScript('satellite_processor_fixed.py', configPathMonth, processingId);
+        const res = await collectResults(monthDir);
+        // Build a preview object if an image exists
+        const previewImage = (res.outputFiles || []).find((f: string) => f.endsWith('vegetation_highlighted.png'))
+          || (res.outputFiles || []).find((f: string) => f.endsWith('ndvi_visualization.png'))
+          || '';
+        return { res, preview: previewImage ? { label: `${label} ${year}-${mm}`, image: previewImage, month, year, type: label === 'baseline' ? 'baseline' : 'compare', veg: res.vegetationPercentage || 0 } : null };
+      }
 
-    // Collect results
-    console.log('Collecting results...');
-    const results = await collectResults(outputDir);
-    console.log('Results collected:', results);
-    
-    updateProcessingJob(processingId, {
-      status: 'completed',
-      progress: 100,
-      message: 'Processing completed successfully!',
-      endTime: new Date(),
-      result: results
-    });
+      async function runYearMonthly(year: number, label: string) {
+        const monthly: { month: number; veg: number }[] = [];
+        const previews: { label: string; image: string }[] = [];
+        for (let m = 1; m <= 12; m++) {
+          try {
+            const { res, preview } = await runMonth(year, m, label);
+            if (res && typeof res.vegetationPercentage === 'number') {
+              monthly.push({ month: m, veg: res.vegetationPercentage });
+            }
+            if (preview) previews.push(preview);
 
-    console.log(`Optimized processing completed successfully for ${processingId}`);
+            // Incremental UI update with previews and coarse progress
+            completedMonths += 1;
+            const job = getProcessingJob(processingId);
+            const existingPreviews = (job?.result as any)?.previews || [];
+            const newPreviews = preview ? [...existingPreviews, preview] : existingPreviews;
+            const percent = Math.min(95, Math.round((completedMonths / totalMonths) * 95));
+            const partial = {
+              status: 'processing',
+              progress: percent,
+              message: `${label} ${year}-${m.toString().padStart(2, '0')} completed`,
+              result: {
+                downloadedImages: completedMonths,
+                processedComposites: completedMonths,
+                vegetationPercentage: res?.vegetationPercentage || 0,
+                highDensityPercentage: 0,
+                mediumDensityPercentage: 0,
+                lowDensityPercentage: 0,
+                ndviThreshold: config.ndviThreshold,
+                outputFiles: [],
+                summary: undefined,
+                previews: newPreviews
+              } as any
+            } as any;
+
+            updateProcessingJob(processingId, partial);
+            // Persist to disk for durability across restarts
+            try {
+              const statusPath = path.join(outputDir, 'status.json');
+              await fs.writeFile(statusPath, JSON.stringify(getProcessingJob(processingId), null, 2));
+            } catch (e) {
+              console.warn('Failed to persist file-backed status:', e);
+            }
+          } catch (e) {
+            console.warn(`Month ${m} ${year} failed:`, e);
+          }
+        }
+        const count = monthly.length || 1;
+        const avgVeg = monthly.reduce((s, r) => s + r.veg, 0) / count;
+        return { averageVegetation: avgVeg, monthlyCount: monthly.length, previews };
+      }
+
+      const baselineAgg = await runYearMonthly(baselineYear, 'baseline');
+      const compareAgg = await runYearMonthly(compareYear, 'compare');
+
+      const annualComparison = {
+        baselineYear,
+        baselineVegetation: baselineAgg.averageVegetation,
+        compareYear,
+        compareVegetation: compareAgg.averageVegetation,
+        percentChange: baselineAgg.averageVegetation !== 0
+          ? ((compareAgg.averageVegetation - baselineAgg.averageVegetation) / baselineAgg.averageVegetation) * 100
+          : 0
+      };
+
+      updateProcessingJob(processingId, {
+        status: 'completed',
+        progress: 100,
+        message: 'Annual comparison (monthly best) completed successfully!',
+        endTime: new Date(),
+        result: {
+          downloadedImages: compareAgg.monthlyCount,
+          processedComposites: compareAgg.monthlyCount,
+          vegetationPercentage: compareAgg.averageVegetation,
+          highDensityPercentage: 0,
+          mediumDensityPercentage: 0,
+          lowDensityPercentage: 0,
+          outputFiles: [],
+          summary: undefined,
+          annualComparison,
+          previews: [...baselineAgg.previews, ...compareAgg.previews]
+        }
+      });
+
+      console.log(`Annual monthly-best comparison completed for ${processingId}`);
+    } else {
+      // Save configuration for Python script (single-range mode)
+      const configPath = path.join(outputDir, 'config.json');
+      await fs.writeFile(configPath, JSON.stringify({
+        city: config.city,
+        startMonth: config.startMonth,
+        startYear: config.startYear,
+        endMonth: config.endMonth,
+        endYear: config.endYear,
+        ndviThreshold: config.ndviThreshold,
+        cloudCoverageThreshold: config.cloudCoverageThreshold,
+        enableVegetationIndices: config.enableVegetationIndices,
+        enableAdvancedCloudDetection: config.enableAdvancedCloudDetection,
+        outputDir: outputDir
+      }, null, 2));
+      console.log(`Saved config to: ${configPath}`);
+
+      console.log('Running optimized satellite processor...');
+      await runPythonScript('satellite_processor_fixed.py', configPath, processingId);
+
+      console.log('Collecting results...');
+      const results = await collectResults(outputDir);
+      console.log('Results collected:', results);
+      
+      updateProcessingJob(processingId, {
+        status: 'completed',
+        progress: 100,
+        message: 'Processing completed successfully!',
+        endTime: new Date(),
+        result: results
+      });
+
+      console.log(`Optimized processing completed successfully for ${processingId}`);
+    }
 
   } catch (error) {
     console.error('Processing error:', error);

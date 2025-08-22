@@ -154,7 +154,7 @@ The application supports various processing configurations:
 - **Cloud Detection**: Basic or advanced cloud detection algorithms
 
 ### City Data
-Cities are defined in `public/cities.json` with:
+Cities are defined in the repository root `cities.json` and served via the app API at `/api/cities` with:
 - Geographic boundaries (GeoJSON polygons)
 - Coordinate information
 - Administrative details
@@ -162,9 +162,9 @@ Cities are defined in `public/cities.json` with:
 ## Processing Pipeline
 
 ### 1. Data Discovery
-- Query STAC catalogs for Sentinel-1 and Sentinel-2 imagery
-- Filter by date range, location, and cloud coverage
-- Select optimal images for processing
+- Query STAC catalogs for Sentinel-2 L2A imagery (10 m)
+- Filter by date range, location, and cloud coverage (scene-level)
+- Select optimal images for processing (best available per month)
 
 ### 2. Download & Preprocessing  
 - Download essential spectral bands (B02, B03, B04, B08, B11, SCL)
@@ -172,14 +172,15 @@ Cities are defined in `public/cities.json` with:
 - Apply radiometric corrections
 
 ### 3. Cloud Detection & Removal
-- Use Scene Classification Layer (SCL) for cloud detection
-- Advanced spectral analysis for improved accuracy
-- Gap filling using temporal compositing
+- Use Scene Classification Layer (SCL) per-pixel masking for clouds, shadows, water (exclude SCL classes 0,1,3,6,8,9,10,11)
+- Scene-level cloud limit to fetch candidates; per-pixel SCL enforces quality during analysis
+- Monthly median compositing from valid pixels when multiple items available
 
 ### 4. Vegetation Analysis
-- Calculate NDVI from red and near-infrared bands
-- Apply configurable thresholds for vegetation classification
-- Generate vegetation masks and statistics
+- Calculate NDVI from red (B04) and NIR (B08) bands
+- Apply configurable NDVI thresholds and report multiple density ranges (low/medium/high)
+- Exclude water pixels via SCL (class 6) in all statistics
+- Compute percent change vs 2020 baseline: if the selected year != 2020, compute vegetation % for the same month(s) in 2020 and report ((current-2020)/2020)*100
 
 ### 5. Visualization
 - Create false color infrared composites

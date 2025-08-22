@@ -20,14 +20,19 @@ export interface City {
 
 export interface ProcessingConfig {
   city: City;
-  startMonth: string;
-  startYear: number;
-  endMonth: string;
-  endYear: number;
+  // Legacy fields (kept for compatibility)
+  startMonth?: string;
+  startYear?: number;
+  endMonth?: string;
+  endYear?: number;
   ndviThreshold: number;
   cloudCoverageThreshold: number;
   enableVegetationIndices: boolean;
   enableAdvancedCloudDetection: boolean;
+  // New annual comparison mode
+  annualMode?: boolean;
+  baselineYear?: number; // default 2020
+  compareYear?: number;  // user-selected
 }
 
 export interface GeographicBounds {
@@ -67,7 +72,17 @@ export interface VegetationSummary {
   geographic_bounds?: GeographicBounds;
   city_info?: CityInfo;
   processing_config?: ProcessingConfigSummary;
+  baseline_vegetation_2020?: number | null;
+  percent_change_vs_2020?: number | null;
   output_files: string[];
+}
+
+export interface AnnualComparison {
+  baselineYear: number;
+  baselineVegetation: number;
+  compareYear: number;
+  compareVegetation: number;
+  percentChange: number; // positive = gain, negative = loss
 }
 
 export interface ProcessingStatus {
@@ -86,7 +101,9 @@ export interface ProcessingStatus {
     lowDensityPercentage: number;
     ndviThreshold?: number;
     outputFiles: string[];
-    summary?: VegetationSummary; // Enhanced summary data
+    summary?: VegetationSummary; // Enhanced summary data (single run)
+    annualComparison?: AnnualComparison; // Annual comparison summary when annualMode
+    previews?: { label: string; image: string; month: number; year: number; type: 'baseline' | 'compare' }[]; // monthly previews
   };
 }
 

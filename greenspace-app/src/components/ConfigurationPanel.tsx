@@ -20,21 +20,6 @@ export default function ConfigurationPanel({
 }: ConfigurationPanelProps) {
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 10 }, (_, i) => currentYear - i);
-  
-  const months = [
-    { value: '01', label: 'January' },
-    { value: '02', label: 'February' },
-    { value: '03', label: 'March' },
-    { value: '04', label: 'April' },
-    { value: '05', label: 'May' },
-    { value: '06', label: 'June' },
-    { value: '07', label: 'July' },
-    { value: '08', label: 'August' },
-    { value: '09', label: 'September' },
-    { value: '10', label: 'October' },
-    { value: '11', label: 'November' },
-    { value: '12', label: 'December' }
-  ];
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
@@ -54,66 +39,44 @@ export default function ConfigurationPanel({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Start Date */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Start Date
+            {/* Annual Mode */}
+            <div className="md:col-span-2">
+              <label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={config.annualMode ?? true}
+                  onChange={(e) => onConfigChange({ ...config, annualMode: e.target.checked })}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-700">Analyze whole year (best cloud-free monthly composites averaged)</span>
               </label>
-              <div className="grid grid-cols-2 gap-2">
-                <select
-                  value={config.startMonth || '07'}
-                  onChange={(e) => onConfigChange({ ...config, startMonth: e.target.value })}
-                  className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {months.map(month => (
-                    <option key={month.value} value={month.value}>
-                      {month.label}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={config.startYear || 2020}
-                  onChange={(e) => onConfigChange({ ...config, startYear: parseInt(e.target.value) })}
-                  className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {years.map(year => (
-                    <option key={year} value={year}>
-                      {year}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <p className="text-xs text-gray-500 mt-1">When enabled, the app selects the least-cloudy images per month, composites them, and averages the year.</p>
             </div>
 
-            {/* End Date */}
+            {/* Year Selection */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                End Date
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <select
-                  value={config.endMonth || '07'}
-                  onChange={(e) => onConfigChange({ ...config, endMonth: e.target.value })}
-                  className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {months.map(month => (
-                    <option key={month.value} value={month.value}>
-                      {month.label}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={config.endYear || 2020}
-                  onChange={(e) => onConfigChange({ ...config, endYear: parseInt(e.target.value) })}
-                  className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {years.map(year => (
-                    <option key={year} value={year}>
-                      {year}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Baseline Year</label>
+              <select
+                value={config.baselineYear ?? 2020}
+                onChange={(e) => onConfigChange({ ...config, baselineYear: parseInt(e.target.value) })}
+                className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
+              >
+                {years.map(year => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Comparison Year</label>
+              <select
+                value={config.compareYear ?? currentYear}
+                onChange={(e) => onConfigChange({ ...config, compareYear: parseInt(e.target.value) })}
+                className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
+              >
+                {years.map(year => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -226,7 +189,7 @@ export default function ConfigurationPanel({
                 : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500'
             }`}
           >
-            {isProcessing ? 'Processing...' : 'Start Processing'}
+            {isProcessing ? 'Processing...' : 'Start Annual Comparison'}
           </button>
         </div>
       )}

@@ -1,6 +1,7 @@
 'use client';
 
 import { ProcessingStatus } from '@/types';
+import { useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 
 interface ProcessingPanelProps {
@@ -8,6 +9,7 @@ interface ProcessingPanelProps {
 }
 
 export default function ProcessingPanel({ status }: ProcessingPanelProps) {
+  const [compareModal, setCompareModal] = useState<{ month: number; baseline?: string; compare?: string } | null>(null);
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'pending': return '⏳';
@@ -115,6 +117,132 @@ export default function ProcessingPanel({ status }: ProcessingPanelProps) {
           </div>
         </div>
       </div>
+
+      {/* Month Timeline */}
+      {status.result?.previews && (
+        <div className="mt-6">
+          <h4 className="font-semibold text-gray-700 mb-2">Monthly Progress</h4>
+          <div className="grid grid-cols-12 gap-1 text-center text-xs">
+            {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => {
+              const hasBaseline = status.result?.previews?.some((p) => p.month === m && p.type === 'baseline');
+              const hasCompare = status.result?.previews?.some((p) => p.month === m && p.type === 'compare');
+              const state = hasBaseline && hasCompare ? 'both' : hasBaseline ? 'baseline' : hasCompare ? 'compare' : 'none';
+              const bg = state === 'both' ? 'bg-green-500' : state === 'baseline' ? 'bg-green-300' : state === 'compare' ? 'bg-blue-300' : 'bg-gray-200';
+              return (
+                <div key={m} className="flex flex-col items-center">
+                  <div className={`w-full h-2 rounded ${bg}`}></div>
+                  <div className="mt-1 text-gray-600">{m}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Live Previews (monthly) */}
+      {status.result?.previews && status.result.previews.length > 0 && (
+        <div className="mt-6">
+          <h4 className="font-semibold text-gray-700 mb-3">Live Monthly Previews</h4>
+          {(() => {
+            const previews = status.result?.previews || [];
+            const ordered: typeof previews = [] as any;
+            for (let m = 1; m <= 12; m++) {
+              const b = previews.find(p => p.month === m && p.type === 'baseline');
+              const c = previews.find(p => p.month === m && p.type === 'compare');
+              if (b) ordered.push(b as any);
+              if (c) ordered.push(c as any);
+            }
+            return (
+              <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+                {ordered.map((p, idx) => (
+                  <div key={idx} className="border border-gray-200 rounded overflow-hidden bg-gray-50 cursor-pointer" onClick={() => {
+                    const month = p.month;
+                    const baseline = previews.find(x => x.month===month && x.type==='baseline')?.image;
+                    const compare = previews.find(x => x.month===month && x.type==='compare')?.image;
+                    setCompareModal({ month, baseline, compare });
+                  }}>
+                    <div className="text-xs text-gray-600 px-2 py-1 border-b flex justify-between"><span>{p.label}</span><span className={p.type==='baseline'?'text-green-700':'text-blue-700'}>{p.type}</span></div>
+                    <img
+                      src={`/api/preview?file=${encodeURIComponent(p.image)}`}
+                      alt={p.label}
+                      className="w-full h-28 object-cover"
+                    />
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+          <p className="text-xs text-gray-500 mt-2">Showing up to 24 thumbnails (12 baseline + 12 compare). Click any month to open side‑by‑side.</p>
+        </div>
+      )}
+
+      {/* Running annual average */}
+      {status.result?.previews && status.result.previews.length > 0 && (
+        <div className="mt-6">
+          <h4 className="font-semibold text-gray-700 mb-2">Running Annual Average</h4>
+          {(() => {
+            const previews = status.result?.previews || [];
+            const byType = (t: 'baseline'|'compare') => Array.from(new Set(previews.filter(p=>p.type===t).map(p=>p.month)))
+              .map(m => previews.find(p=>p.type===t && p.month===m))
+              .filter(Boolean) as any[];
+            const baseVals = byType('baseline').map(p => (p as any).veg || 0);
+            const compVals = byType('compare').map(p => (p as any).veg || 0);
+            const avg = (arr: number[]) => arr.length ? (arr.reduce((a,b)=>a+b,0)/arr.length) : 0;
+            const baseAvg = avg(baseVals);
+            const compAvg = avg(compVals);
+            const delta = baseAvg !== 0 ? ((compAvg-baseAvg)/baseAvg)*100 : 0;
+            return (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-gray-50 p-4 rounded text-center">
+                  <div className="text-sm text-gray-600">Baseline avg (so far)</div>
+                  <div className="text-2xl font-bold text-gray-800">{baseAvg.toFixed(1)}%</div>
+                </div>
+                <div className="text-center flex flex-col justify-center">
+                  <div className="text-sm text-gray-600">Change (so far)</div>
+                  <div className={`text-2xl font-bold ${delta>=0?'text-green-600':'text-red-600'}`}>{delta>=0?'▲':'▼'} {delta.toFixed(1)}%</div>
+                </div>
+                <div className="bg-gray-50 p-4 rounded text-center">
+                  <div className="text-sm text-gray-600">Compare avg (so far)</div>
+                  <div className="text-2xl font-bold text-gray-800">{compAvg.toFixed(1)}%</div>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* Compare Modal */}
+      {compareModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-5xl w-full">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h4 className="font-semibold">Month {compareModal.month} — Baseline vs Compare</h4>
+              <button className="text-gray-500 hover:text-gray-700" onClick={() => setCompareModal(null)}>✕</button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
+              <div className="border-r">
+                <div className="text-xs text-gray-600 px-3 py-1 bg-gray-50">Baseline</div>
+                {compareModal.baseline ? (
+                  <img src={`/api/preview?file=${encodeURIComponent(compareModal.baseline)}`} alt="baseline" className="w-full object-contain" />
+                ) : (
+                  <div className="p-6 text-sm text-gray-400">No baseline image available for this month.</div>
+                )}
+              </div>
+              <div>
+                <div className="text-xs text-gray-600 px-3 py-1 bg-gray-50">Compare</div>
+                {compareModal.compare ? (
+                  <img src={`/api/preview?file=${encodeURIComponent(compareModal.compare)}`} alt="compare" className="w-full object-contain" />
+                ) : (
+                  <div className="p-6 text-sm text-gray-400">No compare image available for this month.</div>
+                )}
+              </div>
+            </div>
+            <div className="p-4 border-t text-right">
+              <button className="px-3 py-1 bg-blue-600 text-white rounded" onClick={() => setCompareModal(null)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Results Preview */}
       {status.result && (
