@@ -1,0 +1,38 @@
+{
+  "vegetation_percentage": 70.2168761329917,
+  "high_density_percentage": 32.964868395734385,
+  "medium_density_percentage": 26.793038493867922,
+  "low_density_percentage": 10.458969243389404,
+  "ndvi_mean": 0.4314080476760864,
+  "total_pixels": 394972,
+  "vegetation_pixels": 277337,
+  "images_processed": 1,
+  "images_found": 1,
+  "ndvi_threshold": 0.3,
+  "geographic_bounds": {
+    "west": 39.547262,
+    "south": -4.160636,
+    "east": 39.769392,
+    "north": -3.922621,
+    "crs": "EPSG:4326"
+  },
+  "city_info": {
+    "name": "Mombasa, Kenya",
+    "center_lat": -4.0416285,
+    "center_lon": 39.658327
+  },
+  "processing_config": {
+    "ndvi_threshold": 0.3,
+    "cloud_threshold": 20,
+    "highlight_alpha": 0.6,
+    "date_range": "2020-07 to 2020-07"
+  },
+  "baseline_vegetation_2020": null,
+  "percent_change_vs_2020": null,
+  "cloud_excluded_percentage": 39.06201304011084,
+  "output_files": [
+    "vegetation_highlighted.png",
+    "ndvi_visualization.png",
+    "false_color_base.png"
+  ]
+}

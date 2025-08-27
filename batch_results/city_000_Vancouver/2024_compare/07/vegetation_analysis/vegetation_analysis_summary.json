@@ -1,0 +1,38 @@
+{
+  "vegetation_percentage": 46.36544639919487,
+  "high_density_percentage": 22.81759856006503,
+  "medium_density_percentage": 15.623246046952719,
+  "low_density_percentage": 7.9246017921771275,
+  "ndvi_mean": 0.4258326590061188,
+  "total_pixels": 826704,
+  "vegetation_pixels": 383305,
+  "images_processed": 1,
+  "images_found": 1,
+  "ndvi_threshold": 0.3,
+  "geographic_bounds": {
+    "west": -123.293917,
+    "south": 49.172053,
+    "east": -123.022006,
+    "north": 49.318856,
+    "crs": "EPSG:4326"
+  },
+  "city_info": {
+    "name": "Vancouver, Canada",
+    "center_lat": 49.245454499999994,
+    "center_lon": -123.1579615
+  },
+  "processing_config": {
+    "ndvi_threshold": 0.3,
+    "cloud_threshold": 20,
+    "highlight_alpha": 0.6,
+    "date_range": "2024-07 to 2024-07"
+  },
+  "baseline_vegetation_2020": 32.541393291915846,
+  "percent_change_vs_2020": 42.48144196921431,
+  "cloud_excluded_percentage": 32.29523505390079,
+  "output_files": [
+    "vegetation_highlighted.png",
+    "ndvi_visualization.png",
+    "false_color_base.png"
+  ]
+}

@@ -662,3 +662,117 @@ nir[fillable_gaps] = backup_nir[fillable_gaps]
 - ✅ **AUTOMATED VALIDATION** - Real-time coverage monitoring and gap detection
 - ✅ **PRODUCTION READY** - Solution works consistently through web interface
 - ✅ **FUTURE PROOF** - Universal solution for any large city with coverage gaps
+
+## Local FastAPI Server & Static UI Export (2025-08-22)
+
+- ✅ Added `local_app/main.py`: FastAPI server that mirrors Next.js API routes:
+  - `POST /api/process` — starts processing and returns `{ processingId }`
+  - `GET /api/status/{id}` — returns current status JSON
+  - `GET /api/status/stream/{id}` — SSE stream for live updates
+  - `GET /api/cities` — serves repo `cities.json`
+  - `GET /api/preview?file=...` — previews images (tiff→png conversion fallback)
+  - `GET /api/download?file=...` — downloads artifacts
+- ✅ Outputs written to `greenspace-app/public/outputs/<id>` to match frontend expectations
+- ✅ Parallel month processing with `ProcessPoolExecutor`; cap via `GREENSPACE_MAX_WORKERS`
+- ✅ Added `local_app/requirements.txt` (FastAPI, uvicorn, numpy, rasterio, shapely, pyproj, Pillow, etc.)
+- ✅ Added `npm run export` to `greenspace-app/package.json` to build static UI (`out/`)
+- 🔧 Static UI is mounted after API routes to avoid route shadowing
+
+How to run locally (no cloud):
+1. `cd greenspace-app && npm install && npm run export`
+2. `python3 -m venv local_venv && source local_venv/bin/activate` (Windows: `local_venv\\Scripts\\activate`)
+3. `pip install -r local_app/requirements.txt`
+4. `python local_app/main.py` → open `http://127.0.0.1:8000`
+
+## City Editor (/add) with OSM Boundary Import (2025-08-22)
+
+- ✅ Added FastAPI endpoints in `local_app/main.py`:
+  - `GET /api/osm/boundary?city=..&country=..&state=..` — fetches boundary via Nominatim/Overpass
+  - `POST /api/cities/upsert` — upserts a city into root `cities.json` (with backup to `cities_backups/`)
+  - `DELETE /api/cities/{city_id}` — deletes city
+- ✅ New admin UI page `src/app/add/page.tsx`:
+  - Form (country/state/city/email) with OSM Import and Save
+  - Leaflet map preview
+  - ✅ Drawing/editing polygons with `react-leaflet-draw` (create/edit/delete)
+- ✅ Navigation link added in `src/app/layout.tsx` to access `/add`
+- ✅ Dependencies: added `react-leaflet-draw` and imported `leaflet.draw.css`
+- ⚠️ Note: This flow updates the repo-level `cities.json`. Backups are created automatically.
+
+## Live Status/SSE Reliability Fix (2025-08-27)
+
+- ✅ Restored visual progress updates by ensuring API routes use Node runtime
+  - Added `export const runtime = 'nodejs'` to `src/app/api/status/[id]/route.ts` and `src/app/api/status/stream/[id]/route.ts`
+- ✅ Made static export optional to avoid breaking API routes during dev
+  - `next.config.js` now enables `output: 'export'` only when `NEXT_OUTPUT=export` or `STATIC_EXPORT=true` is set
+- Result: `/api/status` polling and `/api/status/stream` SSE no longer return 500 during local development, and progress UI updates in real time again.
+
+## Concurrency Controls for Faster Processing (2025-08-27)
+
+- ✅ Added lightweight Promise pool in `api/process/route.ts` to parallelize monthly jobs with a concurrency cap.
+- ✅ Concurrency is controlled via `GREENSPACE_MAX_WORKERS` (defaults to ~75% of CPU count, max 12).
+- ✅ Applied to:
+  - Annual single-city flow: run months in parallel with capped concurrency.
+  - Batch multi-city flow: per-city months run in parallel with the same cap.
+- 📝 Progress/status persistence unchanged; previews and progress update as each month completes.
+
+## Standalone Batch Processing Solution - 2024-12-19 ✅
+### Created Python Scripts to Bypass Persistent GUI Issues
+- **Issue**: Despite multiple fixes, the web interface continued to show "THERMONUCLEAR" warnings and toFixed errors, preventing reliable report generation
+- **Root Cause**: Persistent JavaScript errors in the React components that couldn't be fully resolved through code fixes alone
+- **Solution Implemented**: Created standalone Python batch processing scripts that bypass the web interface entirely
+- **Scripts Created**:
+  1. `batch_process_test.py` - Test script for 3 cities to verify system works
+  2. `batch_process_all_cities.py` - Full batch processor for all cities
+  3. `batch_requirements.txt` - Dependencies for batch processing
+  4. `BATCH_PROCESSING_README.md` - Comprehensive usage documentation
+- **Key Features**:
+  - Direct CSV generation without web interface
+  - Comprehensive error handling and logging
+  - Progress tracking and status reporting
+  - Multiple output formats (main results, summary stats, top cities)
+  - Interruptible processing with partial result saving
+- **Output Generated**:
+  - `all_cities_results_YYYYMMDD_HHMMSS.csv` - Complete city-by-city results
+  - `summary_statistics_YYYYMMDD_HHMMSS.csv` - Statistical analysis
+  - `top_cities_by_vegetation_YYYYMMDD_HHMMSS.csv` - Top 20 cities by vegetation
+  - `processing_summary_YYYYMMDD_HHMMSS.txt` - Text summary report
+- **Benefits**:
+  - ✅ No more GUI errors or crashes
+  - ✅ Reliable CSV generation
+  - ✅ Batch processing of all cities
+  - ✅ Comprehensive data export
+  - ✅ Professional reporting format
+- **Usage**: Run from project root with `python batch_process_test.py` (test) or `python batch_process_all_cities.py` (full)
+- **Impact**: Users can now get comprehensive vegetation analysis results for all cities without web interface issues
+
+## GUI toFixed Error Fix - 2024-12-19 ✅
+### Resolved "THERMONUCLEAR: Number.prototype.toFixed called on Number" Errors
+- **Issue**: Frontend was throwing JavaScript errors when trying to call `.toFixed()` on undefined/null values
+- **Root Cause**: Data fields coming from backend were sometimes undefined/null, causing toFixed to fail
+- **Solution Implemented**: Created comprehensive safe number formatting utilities and updated all components
+- **Changes Made**:
+  1. **Created `src/lib/utils.ts`** with safe formatting functions:
+     - `safeToFixed()` - Safely converts values to numbers before calling toFixed
+     - `safeNumber()` - Safely converts values to numbers with fallback
+     - `safePercentage()` - Safely formats percentage values
+     - `safeDecimal()` - Safely formats decimal values
+  2. **Updated all components** to use safe utilities:
+     - `SummaryPanel.tsx` - Replaced local safeToFixed with imported utility
+     - `NDVIMap.tsx` - Updated all vegetation percentage displays
+     - `ProcessingPanel.tsx` - Fixed annual comparison displays
+     - `ResultsPanel.tsx` - Updated all numeric displays and tooltips
+     - `AlignmentTester.tsx` - Fixed progress and alignment displays
+     - `CitySelector.tsx` - Fixed coordinate displays
+- **Key Features**:
+  - Comprehensive error handling for undefined/null values
+  - Automatic fallback to safe defaults (0, '0', etc.)
+  - Console warnings for debugging when errors occur
+  - Consistent formatting across all components
+  - Type-safe utility functions
+- **Benefits**:
+  - ✅ No more "THERMONUCLEAR" JavaScript errors
+  - ✅ Robust handling of missing or invalid data
+  - ✅ Consistent number formatting throughout the app
+  - ✅ Better user experience with graceful fallbacks
+  - ✅ Easier debugging with console warnings
+- **Impact**: Web interface now handles all data scenarios gracefully without crashing or showing errors

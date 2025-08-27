@@ -1,0 +1,38 @@
+{
+  "vegetation_percentage": 1.402631924721293,
+  "high_density_percentage": 0.2094725032595842,
+  "medium_density_percentage": 0.5192593416145302,
+  "low_density_percentage": 0.6739000798471786,
+  "ndvi_mean": 0.07157972455024719,
+  "total_pixels": 395756,
+  "vegetation_pixels": 5551,
+  "images_processed": 1,
+  "images_found": 1,
+  "ndvi_threshold": 0.3,
+  "geographic_bounds": {
+    "west": 46.480708,
+    "south": 24.446915,
+    "east": 47.436519,
+    "north": 25.020673,
+    "crs": "EPSG:4326"
+  },
+  "city_info": {
+    "name": "Riyadh, Saudi Arabia",
+    "center_lat": 24.733794,
+    "center_lon": 46.9586135
+  },
+  "processing_config": {
+    "ndvi_threshold": 0.3,
+    "cloud_threshold": 20,
+    "highlight_alpha": 0.6,
+    "date_range": "2020-07 to 2020-07"
+  },
+  "baseline_vegetation_2020": null,
+  "percent_change_vs_2020": null,
+  "cloud_excluded_percentage": 36.16612202368471,
+  "output_files": [
+    "vegetation_highlighted.png",
+    "ndvi_visualization.png",
+    "false_color_base.png"
+  ]
+}

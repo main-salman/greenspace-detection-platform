@@ -1,0 +1,38 @@
+{
+  "vegetation_percentage": 17.390522287994244,
+  "high_density_percentage": 0.3223010759721359,
+  "medium_density_percentage": 3.9237008208784383,
+  "low_density_percentage": 13.144520391143672,
+  "ndvi_mean": 0.1903865784406662,
+  "total_pixels": 611540,
+  "vegetation_pixels": 106350,
+  "images_processed": 1,
+  "images_found": 1,
+  "ndvi_threshold": 0.3,
+  "geographic_bounds": {
+    "west": 35.199546,
+    "south": 32.181106,
+    "east": 35.314903,
+    "north": 32.264754,
+    "crs": "EPSG:4326"
+  },
+  "city_info": {
+    "name": "Nablus, Palestine",
+    "center_lat": 32.222930000000005,
+    "center_lon": 35.2572245
+  },
+  "processing_config": {
+    "ndvi_threshold": 0.3,
+    "cloud_threshold": 20,
+    "highlight_alpha": 0.6,
+    "date_range": "2024-07 to 2024-07"
+  },
+  "baseline_vegetation_2020": 28.76655656212186,
+  "percent_change_vs_2020": -39.54604107572236,
+  "cloud_excluded_percentage": 0.0,
+  "output_files": [
+    "vegetation_highlighted.png",
+    "ndvi_visualization.png",
+    "false_color_base.png"
+  ]
+}

@@ -1,0 +1,22 @@
+# Requirements for batch city processing
+# Install with: pip install -r batch_requirements.txt
+
+# Core dependencies
+numpy>=1.21.0
+rasterio>=1.2.0
+opencv-python>=4.5.0
+Pillow>=8.0.0
+requests>=2.25.0
+geopandas>=0.10.0
+shapely>=1.7.0
+pyproj>=3.0.0
+
+# STAC and satellite data
+pystac>=1.0.0
+pystac-client>=0.7.0
+
+# Progress tracking
+tqdm>=4.60.0
+
+# Data handling
+pandas>=1.3.0

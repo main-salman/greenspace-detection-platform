@@ -215,7 +215,7 @@ export default function VegetationMap({ city, result, isVisible }: VegetationMap
             )}
             
             {/* Vegetation overlays */}
-            {result.outputFiles.length > 0 && (
+            {Array.isArray(result.outputFiles) && (result.outputFiles?.length || 0) > 0 && (
               <>
                 {result.outputFiles.find(file => file.includes('vegetation_highlighted')) && (
                   <LayersControl.Overlay checked name="💜 Purple Vegetation Density">

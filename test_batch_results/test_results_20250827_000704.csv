@@ -1,0 +1,4 @@
+city_id,city,country,state_province,latitude,longitude,status,processing_time_seconds,vegetation_percentage,high_density_percentage,medium_density_percentage,low_density_percentage,total_pixels,vegetation_pixels,ndvi_mean,images_processed,images_found,error_message
+b2b00574-6325-40d2-8e33-a7214c324696,Vancouver,Canada,British Columbia,49.2194423509897,-123.0800485610962,success,22.52,0,0,0,0,0,0,0,0,0,
+59b2fa95-7b31-40d7-bf99-bd422a510321,Querétaro,Mexico,Querétaro,20.561087056816795,-100.35663664340974,success,17.61,0,0,0,0,0,0,0,0,0,
+95bc2646-3179-4fc2-9b2f-3a1048265be0,Nis,Serbia,Nišava,43.35112349727735,21.86557710170746,success,24.69,0,0,0,0,0,0,0,0,0,

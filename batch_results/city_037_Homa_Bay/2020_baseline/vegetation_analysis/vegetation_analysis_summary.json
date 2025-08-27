@@ -1,0 +1,38 @@
+{
+  "vegetation_percentage": 98.04626889716045,
+  "high_density_percentage": 66.36347834934416,
+  "medium_density_percentage": 27.564417802121397,
+  "low_density_percentage": 4.118372745694882,
+  "ndvi_mean": 0.6017194986343384,
+  "total_pixels": 471764,
+  "vegetation_pixels": 462547,
+  "images_processed": 1,
+  "images_found": 1,
+  "ndvi_threshold": 0.3,
+  "geographic_bounds": {
+    "west": 34.415274,
+    "south": -0.660889,
+    "east": 34.535437,
+    "north": -0.499192,
+    "crs": "EPSG:4326"
+  },
+  "city_info": {
+    "name": "Homa Bay, Kenya",
+    "center_lat": -0.5800405,
+    "center_lon": 34.4753555
+  },
+  "processing_config": {
+    "ndvi_threshold": 0.3,
+    "cloud_threshold": 20,
+    "highlight_alpha": 0.6,
+    "date_range": "2020-07 to 2020-07"
+  },
+  "baseline_vegetation_2020": null,
+  "percent_change_vs_2020": null,
+  "cloud_excluded_percentage": 6.1853209987511635,
+  "output_files": [
+    "vegetation_highlighted.png",
+    "ndvi_visualization.png",
+    "false_color_base.png"
+  ]
+}

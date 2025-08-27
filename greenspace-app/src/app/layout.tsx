@@ -16,7 +16,15 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>{children}</body>
+      <body className={inter.className}>
+        <nav className="w-full bg-white border-b mb-4">
+          <div className="container mx-auto px-4 py-2 text-sm flex gap-4">
+            <a href="/" className="text-blue-600 hover:underline">Home</a>
+            <a href="/add" className="text-blue-600 hover:underline">Add / Edit City</a>
+          </div>
+        </nav>
+        {children}
+      </body>
     </html>
   );
 }

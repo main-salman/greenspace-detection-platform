@@ -1,0 +1,38 @@
+{
+  "vegetation_percentage": 0.7908409648928867,
+  "high_density_percentage": 0.08465503799294832,
+  "medium_density_percentage": 0.2829107369351967,
+  "low_density_percentage": 0.4232751899647416,
+  "ndvi_mean": 0.03870348632335663,
+  "total_pixels": 687496,
+  "vegetation_pixels": 5437,
+  "images_processed": 1,
+  "images_found": 1,
+  "ndvi_threshold": 0.3,
+  "geographic_bounds": {
+    "west": 39.666438,
+    "south": 21.330075,
+    "east": 39.993281,
+    "north": 21.549936,
+    "crs": "EPSG:4326"
+  },
+  "city_info": {
+    "name": "Mecca, Saudi Arabia",
+    "center_lat": 21.440005499999998,
+    "center_lon": 39.8298595
+  },
+  "processing_config": {
+    "ndvi_threshold": 0.3,
+    "cloud_threshold": 20,
+    "highlight_alpha": 0.6,
+    "date_range": "2024-07 to 2024-07"
+  },
+  "baseline_vegetation_2020": 1.7781921640271363,
+  "percent_change_vs_2020": -55.52556237218814,
+  "cloud_excluded_percentage": 0.0,
+  "output_files": [
+    "vegetation_highlighted.png",
+    "ndvi_visualization.png",
+    "false_color_base.png"
+  ]
+}

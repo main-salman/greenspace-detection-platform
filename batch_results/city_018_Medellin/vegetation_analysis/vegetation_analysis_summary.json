@@ -1,0 +1,38 @@
+{
+  "vegetation_percentage": 71.13935668236545,
+  "high_density_percentage": 51.78648851197225,
+  "medium_density_percentage": 12.671173177865153,
+  "low_density_percentage": 6.681694992528052,
+  "ndvi_mean": 0.5555355548858643,
+  "total_pixels": 671177,
+  "vegetation_pixels": 477471,
+  "images_processed": 1,
+  "images_found": 1,
+  "ndvi_threshold": 0.3,
+  "geographic_bounds": {
+    "west": -75.658572,
+    "south": 6.1691,
+    "east": -75.49103,
+    "north": 6.32882,
+    "crs": "EPSG:4326"
+  },
+  "city_info": {
+    "name": "Medellin, Colombia",
+    "center_lat": 6.24896,
+    "center_lon": -75.57480100000001
+  },
+  "processing_config": {
+    "ndvi_threshold": 0.3,
+    "cloud_threshold": 20,
+    "highlight_alpha": 0.6,
+    "date_range": "2020-07 to 2020-07"
+  },
+  "baseline_vegetation_2020": null,
+  "percent_change_vs_2020": null,
+  "cloud_excluded_percentage": 2.5542633970701396,
+  "output_files": [
+    "vegetation_highlighted.png",
+    "ndvi_visualization.png",
+    "false_color_base.png"
+  ]
+}

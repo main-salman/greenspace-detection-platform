@@ -1,5 +1,60 @@
 # Greenspace Detection Web App - Development History
 
+## 2025-01-27: Batch Processor Enhanced with Year Comparison (2020 vs 2024)
+
+### 🔄 **BREAKTHROUGH: Implemented Year-over-Year Comparison in Batch Processor**
+
+**Problem Solved**: The batch processor was only processing single-year data (July 2020) instead of comparing two years like the GUI application does.
+
+**Solution**: Completely rewrote `batch_process_all_cities.py` to implement the same year comparison logic as the GUI:
+
+#### ✅ **Key Changes Implemented:**
+1. **Dual Year Processing**: Now processes both 2020 (baseline) and 2024 (current) data for each city
+2. **Same Criteria**: Uses identical NDVI threshold (0.3), cloud coverage threshold (20%), and July month selection
+3. **Year-over-Year Analysis**: Calculates percentage changes between 2020 and 2024 vegetation coverage
+4. **Comprehensive Output**: Generates separate analysis directories for each year with same file types as GUI
+5. **Enhanced Reporting**: Creates detailed CSV reports showing baseline vs current year comparisons
+
+#### ✅ **Processing Logic:**
+- **2024 Analysis**: Current year data processing with `PerfectAlignmentSatelliteProcessor`
+- **2020 Baseline**: Baseline year processing using same parameters and thresholds
+- **Change Calculation**: Computes percentage changes for vegetation, high/medium/low density areas
+- **Output Structure**: Creates `2024_analysis/` and `2020_baseline/` subdirectories per city
+
+#### ✅ **Enhanced CSV Reports:**
+1. **Main Results**: `year_comparison_results_YYYYMMDD_HHMMSS.csv` with full year comparison data
+2. **Summary Statistics**: `year_comparison_summary_YYYYMMDD_HHMMSS.csv` with aggregated metrics
+3. **Change Rankings**: `top_cities_by_vegetation_change_YYYYMMDD_HHMMSS.csv` showing biggest changes
+4. **Text Report**: `year_comparison_summary_YYYYMMDD_HHMMSS.txt` with detailed analysis
+
+#### ✅ **Data Fields Added:**
+- **2020 Baseline**: All vegetation metrics for baseline year
+- **2024 Current**: All vegetation metrics for current year  
+- **Year-over-Year Changes**: Percentage changes for all vegetation density categories
+- **Processing Metadata**: Separate image counts and output files for each year
+- **Geographic Bounds**: Bounds data for both years to ensure consistency
+
+#### ✅ **GUI Compatibility:**
+- **Same Output Files**: Generates identical file types (PNG images, JSON summaries)
+- **Same Processing**: Uses `satellite_processor_fixed.py` with identical configuration
+- **Same Thresholds**: NDVI 0.3, cloud coverage <20%, July month selection
+- **Same Analysis**: Vegetation highlighting, NDVI visualization, density breakdowns
+
+### 🚀 **Ready for Full City Processing:**
+- **Total Cities**: 30 cities in `cities.json` ready for year comparison
+- **Expected Output**: 60 analysis directories (30 cities × 2 years) with comprehensive vegetation data
+- **Processing Time**: Estimated 2-4 hours for complete batch processing
+- **Output Location**: `batch_results/` directory with organized city subdirectories
+
+### 📊 **Next Steps:**
+1. Run the enhanced batch processor: `python batch_process_all_cities.py`
+2. Monitor progress with real-time city-by-city updates
+3. Generate comprehensive year comparison reports
+4. Analyze vegetation change patterns across all cities
+5. Validate results against GUI application outputs
+
+**Status**: 🎯 **READY FOR EXECUTION** - Batch processor now implements full year comparison matching GUI functionality.
+
 ## 2025-07-24: Major Optimization Based on Jupyter Notebook
 
 ### 🚀 **BREAKTHROUGH: Implemented Optimized Satellite Processor**
@@ -58,6 +113,47 @@
 - Expand NDVI threshold customization
 
 **Status**: 🎉 **FULLY FUNCTIONAL** - Web app now successfully processes real satellite data and generates accurate vegetation analysis with interactive visualizations.
+
+## 2025-08-27: Year-comparison CSV correctness fixes and diagnostics
+
+- Changed `batch_process_all_cities.py` to compute vegetation change as absolute difference (2024 − 2020) in percentage points, not relative percent.
+- Switched high/medium/low density "change" to absolute differences as well (percentage points).
+- Added `cloud_excluded_percentage_2020` and `_2024` to CSV to help diagnose anomalies due to heavy cloud masking or coverage issues.
+- In `satellite_processor_fixed.py`, tightened image fallback: broadened search stays within the target year instead of 2020–2022, preventing cross-year contamination.
+- Standardized denominator for percentages to full city area, ensuring consistency between years even with cloud masking.
+- Action: Regenerate batch CSVs to verify outliers (Chancay 2020=0%, Seoul/Manta/San Fernando large changes, Manchester/Dhaka identical values, Iquique 2024=0%) against coverage/cloud metrics and bounds.
+
+## 2025-08-27: Batch runner annual averaging mode (parity with main app)
+
+- Added `--annual` flag to `batch_process_all_cities.py` to run monthly-best processing across all 12 months per year (2020 and 2024) and average vegetation/density metrics, matching the main app’s yearly methodology.
+- Annual mode uses the same pipeline features as the app: city-polygon masking, SCL cloud/shadow/water exclusion, enhanced coverage checks, and multi-tile gap filling.
+- CSVs now reflect annual averages when `--annual` is used; year-over-year change remains absolute percentage points (2024 − 2020).
+- Validated on Manchester; annual averages produced plausible month-to-month variability and stable annual mean. Running flagged cities (Chancay, Seoul, Manta, San Fernando, Manchester, Dhaka, Iquique) to verify anomalies.
+
+## 2025-08-27: Live progress 500 errors fixed (Next.js dev)
+
+- Root cause: `next.config.js` forced static `output: 'export'`, which breaks dynamic API routes and SSE in dev, leading to 500s on `/api/status` and `/api/status/stream`.
+- Fixes applied:
+  - Made static export conditional via env (`NEXT_OUTPUT=export` or `STATIC_EXPORT=true`).
+  - Added `export const runtime = 'nodejs'` to `greenspace-app/src/app/api/status/[id]/route.ts` and `.../status/stream/[id]/route.ts` to ensure Node runtime for FS + SSE.
+- Result: Visual progress is restored; polling and SSE endpoints return 200 in local development.
+
+## 2025-08-27: Parallel processing with concurrency cap
+
+- Implemented a lightweight concurrency pool in `greenspace-app/src/app/api/process/route.ts`.
+- Months now run in parallel (annual single-city and batch modes) with limit `GREENSPACE_MAX_WORKERS` (default ≈ 75% of CPU, max 12).
+- Intended to achieve up to ~10x speedup on multi-core machines while keeping system stable.
+
+## 2025-08-27: Fixed "Invalid time value" client error post-processing
+
+- Root cause: dates persisted in `public/outputs/*/status.json` are ISO strings with microseconds and without timezone; UI assumed `Date` objects and called `new Date(value)` directly, which can yield an invalid Date in the packaged app context.
+- Implemented robust date handling:
+  - Added `safeParseDate()` and `formatTimeAgo()` to `src/lib/utils.ts` using `date-fns/parseISO` with UTC fallback.
+  - Updated `ProcessingPanel` to use `formatTimeAgo()` for `startTime`/`endTime` rendering.
+  - Relaxed `ProcessingStatus.startTime/endTime` types to `Date | string | number` to match file-backed status.
+  - Normalized dates in `processing-store.updateProcessingJob()` using `safeParseDate`.
+  - Ensured status responses are non-cached.
+- Verified: processing completes and UI renders without RangeError; works in local server build and packaged app.
 
 ## 2025-07-24: Interactive Map Integration Complete
 

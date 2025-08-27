@@ -1,0 +1,38 @@
+{
+  "vegetation_percentage": 78.47114726142863,
+  "high_density_percentage": 43.26839363020483,
+  "medium_density_percentage": 22.67100430517115,
+  "low_density_percentage": 12.531749326052655,
+  "ndvi_mean": 0.5162591934204102,
+  "total_pixels": 667337,
+  "vegetation_pixels": 523667,
+  "images_processed": 1,
+  "images_found": 1,
+  "ndvi_threshold": 0.3,
+  "geographic_bounds": {
+    "west": 85.784034,
+    "south": 20.205793,
+    "east": 85.880165,
+    "north": 20.315623,
+    "crs": "EPSG:4326"
+  },
+  "city_info": {
+    "name": "Bhubaneswar, India",
+    "center_lat": 20.260708,
+    "center_lon": 85.8320995
+  },
+  "processing_config": {
+    "ndvi_threshold": 0.3,
+    "cloud_threshold": 20,
+    "highlight_alpha": 0.6,
+    "date_range": "2020-07 to 2020-07"
+  },
+  "baseline_vegetation_2020": null,
+  "percent_change_vs_2020": null,
+  "cloud_excluded_percentage": 2.675864281703698,
+  "output_files": [
+    "vegetation_highlighted.png",
+    "ndvi_visualization.png",
+    "false_color_base.png"
+  ]
+}

@@ -90,28 +90,26 @@ export default function Home() {
   };
 
   const pollProcessingStatus = async (processingId: string) => {
-    // Prefer SSE stream; fallback to polling
+    const baseUrl = window.location.origin;
+    // Immediately fetch once so UI shows first status
     try {
-      const baseUrl = window.location.origin;
+      const first = await fetch(`${baseUrl}/api/status/${processingId}`, { cache: 'no-store' });
+      if (first.ok) {
+        const st = await first.json();
+        setProcessingStatus(st);
+      }
+    } catch {}
+
+    // Prefer SSE stream; fallback if no messages within 3s or on error
+    try {
       const es = new EventSource(`${baseUrl}/api/status/stream/${processingId}`);
-      es.onmessage = (e) => {
-        try {
-          const status: ProcessingStatus = JSON.parse(e.data);
-          setProcessingStatus(status);
-          if (status.status === 'completed' || status.status === 'failed') {
-            es.close();
-            setIsPolling(false);
-          }
-        } catch (err) {
-          console.warn('Bad SSE payload', err);
-        }
-      };
-      es.onerror = () => {
-        es.close();
-        // Fallback to polling
+      let gotMessage = false;
+      const fallback = () => {
+        if (gotMessage) return;
+        try { es.close(); } catch {}
         const poll = async () => {
           try {
-            const resp = await fetch(`${baseUrl}/api/status/${processingId}`);
+            const resp = await fetch(`${baseUrl}/api/status/${processingId}`, { cache: 'no-store' });
             if (!resp.ok) return;
             const status: ProcessingStatus = await resp.json();
             setProcessingStatus(status);
@@ -127,6 +125,23 @@ export default function Home() {
         };
         poll();
       };
+
+      const timeout = setTimeout(fallback, 3000);
+      es.onmessage = (e) => {
+        gotMessage = true;
+        clearTimeout(timeout);
+        try {
+          const status: any = JSON.parse(e.data);
+          setProcessingStatus(status);
+          if (status.status === 'completed' || status.status === 'failed') {
+            es.close();
+            setIsPolling(false);
+          }
+        } catch (err) {
+          console.warn('Bad SSE payload', err);
+        }
+      };
+      es.onerror = () => fallback();
     } catch (e) {
       console.warn('SSE unavailable, using polling');
     }
@@ -179,8 +194,8 @@ export default function Home() {
                   <ProcessingPanel status={processingStatus} />
                 )}
                 
-                {processingStatus?.status === 'completed' && processingStatus.result && (
-                  <ResultsPanel status={processingStatus} selectedCity={selectedCity} />
+                {processingStatus?.status === 'completed' && (
+                  <ResultsPanel status={processingStatus as any} selectedCity={selectedCity} />
                 )}
                 
                 {!processingStatus && (

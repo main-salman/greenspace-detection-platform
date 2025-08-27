@@ -1,0 +1,38 @@
+{
+  "vegetation_percentage": 94.73348115550496,
+  "high_density_percentage": 69.06438759992864,
+  "medium_density_percentage": 19.62919856029134,
+  "low_density_percentage": 6.039894995284983,
+  "ndvi_mean": 0.6640417575836182,
+  "total_pixels": 706254,
+  "vegetation_pixels": 669059,
+  "images_processed": 1,
+  "images_found": 1,
+  "ndvi_threshold": 0.3,
+  "geographic_bounds": {
+    "west": 21.841421,
+    "south": 42.501365,
+    "east": 21.98905,
+    "north": 42.573209,
+    "crs": "EPSG:4326"
+  },
+  "city_info": {
+    "name": "Vranje, Serbia",
+    "center_lat": 42.537287,
+    "center_lon": 21.9152355
+  },
+  "processing_config": {
+    "ndvi_threshold": 0.3,
+    "cloud_threshold": 20,
+    "highlight_alpha": 0.6,
+    "date_range": "2020-07 to 2020-07"
+  },
+  "baseline_vegetation_2020": null,
+  "percent_change_vs_2020": null,
+  "cloud_excluded_percentage": 0.18246189288313816,
+  "output_files": [
+    "vegetation_highlighted.png",
+    "ndvi_visualization.png",
+    "false_color_base.png"
+  ]
+}

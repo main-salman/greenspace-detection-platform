@@ -1,0 +1,38 @@
+{
+  "vegetation_percentage": 0.49528720986944835,
+  "high_density_percentage": 0.014997246303934949,
+  "medium_density_percentage": 0.15942450902922445,
+  "low_density_percentage": 0.32086545453628895,
+  "ndvi_mean": 0.054689422249794006,
+  "total_pixels": 793479,
+  "vegetation_pixels": 3930,
+  "images_processed": 1,
+  "images_found": 1,
+  "ndvi_threshold": 0.3,
+  "geographic_bounds": {
+    "west": 41.56085,
+    "south": 20.186484,
+    "east": 41.723585,
+    "north": 20.308884,
+    "crs": "EPSG:4326"
+  },
+  "city_info": {
+    "name": "Al Baha, Saudi Arabia",
+    "center_lat": 20.247684,
+    "center_lon": 41.6422175
+  },
+  "processing_config": {
+    "ndvi_threshold": 0.3,
+    "cloud_threshold": 20,
+    "highlight_alpha": 0.6,
+    "date_range": "2020-07 to 2020-07"
+  },
+  "baseline_vegetation_2020": null,
+  "percent_change_vs_2020": null,
+  "cloud_excluded_percentage": 0.0,
+  "output_files": [
+    "vegetation_highlighted.png",
+    "ndvi_visualization.png",
+    "false_color_base.png"
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "vegetation_percentage": 75.5659589224634,
+  "high_density_percentage": 34.01428098548258,
+  "medium_density_percentage": 26.229410002994907,
+  "low_density_percentage": 15.32226793398591,
+  "ndvi_mean": 0.4996766746044159,
+  "total_pixels": 634410,
+  "vegetation_pixels": 479398,
+  "images_processed": 1,
+  "images_found": 1,
+  "ndvi_threshold": 0.3,
+  "geographic_bounds": {
+    "west": 21.847724,
+    "south": 43.291927,
+    "east": 21.963081,
+    "north": 43.351521,
+    "crs": "EPSG:4326"
+  },
+  "city_info": {
+    "name": "Nis, Serbia",
+    "center_lat": 43.321724,
+    "center_lon": 21.9054025
+  },
+  "processing_config": {
+    "ndvi_threshold": 0.3,
+    "cloud_threshold": 20,
+    "highlight_alpha": 0.6,
+    "date_range": "2024-07 to 2024-07"
+  },
+  "baseline_vegetation_2020": 77.77872353840576,
+  "percent_change_vs_2020": -2.844948483693922,
+  "cloud_excluded_percentage": 0.0,
+  "output_files": [
+    "vegetation_highlighted.png",
+    "ndvi_visualization.png",
+    "false_color_base.png"
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "vegetation_percentage": 84.27760400506503,
+  "high_density_percentage": 68.54061669280246,
+  "medium_density_percentage": 10.669271859722095,
+  "low_density_percentage": 5.067715452540482,
+  "ndvi_mean": 0.6890532970428467,
+  "total_pixels": 596245,
+  "vegetation_pixels": 502501,
+  "images_processed": 1,
+  "images_found": 1,
+  "ndvi_threshold": 0.3,
+  "geographic_bounds": {
+    "west": 132.644157,
+    "south": 34.358432,
+    "east": 132.814445,
+    "north": 34.476818,
+    "crs": "EPSG:4326"
+  },
+  "city_info": {
+    "name": "Higashi Hiroshima, Japan",
+    "center_lat": 34.417625,
+    "center_lon": 132.72930100000002
+  },
+  "processing_config": {
+    "ndvi_threshold": 0.3,
+    "cloud_threshold": 20,
+    "highlight_alpha": 0.6,
+    "date_range": "2024-07 to 2024-07"
+  },
+  "baseline_vegetation_2020": null,
+  "percent_change_vs_2020": null,
+  "cloud_excluded_percentage": 2.474749539971376,
+  "output_files": [
+    "vegetation_highlighted.png",
+    "ndvi_visualization.png",
+    "false_color_base.png"
+  ]
+}

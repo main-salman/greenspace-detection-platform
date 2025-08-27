@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { spawn } from 'child_process';
+import os from 'os';
 import { setProcessingJob, updateProcessingJob, getProcessingJob } from '@/lib/processing-store';
 
 export async function POST(request: NextRequest) {
@@ -31,6 +32,15 @@ export async function POST(request: NextRequest) {
     
     setProcessingJob(processingId, status);
     console.log(`Created processing job ${processingId} for ${config.city?.city || (config.cities ? config.cities.length + ' cities' : 'unknown')}`);
+    // Persist initial status to disk so SSE/polling can see it across processes
+    try {
+      const initialOutputDir = path.join(process.cwd(), 'public', 'outputs', processingId);
+      await fs.mkdir(initialOutputDir, { recursive: true });
+      const statusPath = path.join(initialOutputDir, 'status.json');
+      await fs.writeFile(statusPath, JSON.stringify(status, null, 2));
+    } catch (e) {
+      console.warn('Failed to persist initial status:', e);
+    }
 
     // Start processing asynchronously
     processInBackground(processingId, config);
@@ -60,10 +70,46 @@ async function processInBackground(processingId: string, config: ProcessingConfi
       progress: 5,
       message: 'Initializing satellite processing...'
     });
+    // Persist immediately so clients can pick it up via SSE/file-backed polling
+    try {
+      const statusPath = path.join(outputDir, 'status.json');
+      await fs.writeFile(statusPath, JSON.stringify(getProcessingJob(processingId), null, 2));
+    } catch (e) {
+      console.warn('Failed to persist status after initialization:', e);
+    }
+
+    // Determine worker concurrency from env or CPU count
+    const cpuCount = (os.cpus && typeof os.cpus === 'function') ? os.cpus().length : 4;
+    const maxWorkersFromEnv = Number(process.env.GREENSPACE_MAX_WORKERS || process.env.GREENSAPCE_MAX_WORKERS);
+    const MAX_WORKERS = Math.max(1, Math.min(isNaN(maxWorkersFromEnv) ? Math.max(1, Math.floor(cpuCount * 0.75)) : maxWorkersFromEnv, 12));
+
+    // Lightweight promise pool to cap concurrent Python jobs
+    async function runWithConcurrency<T>(tasks: Array<() => Promise<T>>, limit: number): Promise<T[]> {
+      const results: T[] = [];
+      let index = 0;
+      let active = 0;
+      return await new Promise<T[]>((resolve, reject) => {
+        const schedule = () => {
+          if (index >= tasks.length && active === 0) {
+            resolve(results);
+            return;
+          }
+          while (active < limit && index < tasks.length) {
+            const task = tasks[index++];
+            active += 1;
+            task().then((r) => results.push(r)).catch(reject).finally(() => {
+              active -= 1;
+              schedule();
+            });
+          }
+        };
+        schedule();
+      });
+    }
 
     // Annual comparison mode: run two annual analyses (baseline and compare)
     if (config.annualMode && config.cities && config.cities.length) {
-      // Multi-city batch annual comparison (sequential to limit load)
+      // Multi-city batch annual comparison (per-city months parallel with limit)
       const baselineYear = config.baselineYear ?? 2020;
       const compareYear = config.compareYear ?? baselineYear;
       const batchSummaries: any[] = [];
@@ -125,16 +171,21 @@ async function processInBackground(processingId: string, config: ProcessingConfi
       for (const city of config.cities) {
         const baseMonthly: any[] = [];
         const compMonthly: any[] = [];
-        for (let m = 1; m <= 12; m++) {
-          try {
-            baseMonthly.push(await runMonthForCity(city, baselineYear, m, 'baseline'));
-          } catch {}
-        }
-        for (let m = 1; m <= 12; m++) {
-          try {
-            compMonthly.push(await runMonthForCity(city, compareYear, m, 'compare'));
-          } catch {}
-        }
+
+        const baseTasks = Array.from({ length: 12 }, (_, i) => i + 1).map((m) => async () => {
+          try { return await runMonthForCity(city, baselineYear, m, 'baseline'); } catch { return { veg: 0, ndviMean: 0, highPct: 0, medPct: 0, lowPct: 0, cloud: 0, hectares: 0 }; }
+        });
+        const compTasks = Array.from({ length: 12 }, (_, i) => i + 1).map((m) => async () => {
+          try { return await runMonthForCity(city, compareYear, m, 'compare'); } catch { return { veg: 0, ndviMean: 0, highPct: 0, medPct: 0, lowPct: 0, cloud: 0, hectares: 0 }; }
+        });
+
+        const [baseResults, compResults] = await Promise.all([
+          runWithConcurrency(baseTasks, MAX_WORKERS),
+          runWithConcurrency(compTasks, MAX_WORKERS)
+        ]);
+
+        baseMonthly.push(...baseResults);
+        compMonthly.push(...compResults);
         const avg = (arr: number[]) => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
         const baselineVegetation = avg(baseMonthly.map(x=>x.veg));
         const compareVegetation = avg(compMonthly.map(x=>x.veg));
@@ -204,6 +255,10 @@ async function processInBackground(processingId: string, config: ProcessingConfi
           batchSummaries
         } as any
       });
+      try {
+        const statusPath = path.join(outputDir, 'status.json');
+        await fs.writeFile(statusPath, JSON.stringify(getProcessingJob(processingId), null, 2));
+      } catch {}
       return;
     }
 
@@ -214,7 +269,7 @@ async function processInBackground(processingId: string, config: ProcessingConfi
       let completedMonths = 0;
 
       // Helper to run one month using single best scene selection (fixed script)
-      async function runMonth(year: number, month: number, label: string) {
+      async function runMonth(year: number, month: number, label: 'baseline' | 'compare') {
         const mm = month.toString().padStart(2, '0');
         const monthDir = path.join(outputDir, label, mm);
         await fs.mkdir(monthDir, { recursive: true });
@@ -239,13 +294,14 @@ async function processInBackground(processingId: string, config: ProcessingConfi
           || (res.outputFiles || []).find((f: string) => f.endsWith('ndvi_visualization.png'))
           || '';
         const s = res.summary || {} as any;
-        return { res, preview: previewImage ? { label: `${label} ${year}-${mm}`, image: previewImage, month, year, type: label === 'baseline' ? 'baseline' : 'compare', veg: res.vegetationPercentage || 0, cloud: s.cloud_excluded_percentage || 0, highPct: s.high_density_percentage || 0, medPct: s.medium_density_percentage || 0, lowPct: s.low_density_percentage || 0 } : null };
+        return { res, preview: previewImage ? { label: `${label} ${year}-${mm}`, image: previewImage, month, year, type: label, veg: res.vegetationPercentage || 0, cloud: s.cloud_excluded_percentage || 0, highPct: s.high_density_percentage || 0, medPct: s.medium_density_percentage || 0, lowPct: s.low_density_percentage || 0 } : null };
       }
 
-      async function runYearMonthly(year: number, label: string) {
+      async function runYearMonthly(year: number, label: 'baseline' | 'compare') {
         const monthly: { month: number; veg: number }[] = [];
-        const previews: { label: string; image: string }[] = [];
-        for (let m = 1; m <= 12; m++) {
+        const previews: { label: string; image: string; month: number; year: number; type: 'baseline' | 'compare'; veg?: number; cloud?: number; highPct?: number; medPct?: number; lowPct?: number; cityName?: string }[] = [];
+
+        const tasks = Array.from({ length: 12 }, (_, i) => i + 1).map((m) => async () => {
           try {
             const { res, preview } = await runMonth(year, m, label);
             if (res && typeof res.vegetationPercentage === 'number') {
@@ -288,7 +344,9 @@ async function processInBackground(processingId: string, config: ProcessingConfi
           } catch (e) {
             console.warn(`Month ${m} ${year} failed:`, e);
           }
-        }
+        });
+
+        await runWithConcurrency(tasks, MAX_WORKERS);
         const count = monthly.length || 1;
         const avgVeg = monthly.reduce((s, r) => s + r.veg, 0) / count;
         return { averageVegetation: avgVeg, monthlyCount: monthly.length, previews };
@@ -325,6 +383,10 @@ async function processInBackground(processingId: string, config: ProcessingConfi
           previews: [...baselineAgg.previews, ...compareAgg.previews]
         }
       });
+      try {
+        const statusPath = path.join(outputDir, 'status.json');
+        await fs.writeFile(statusPath, JSON.stringify(getProcessingJob(processingId), null, 2));
+      } catch {}
 
       console.log(`Annual monthly-best comparison completed for ${processingId}`);
     } else {
@@ -358,6 +420,10 @@ async function processInBackground(processingId: string, config: ProcessingConfi
         endTime: new Date(),
         result: results
       });
+      try {
+        const statusPath = path.join(outputDir, 'status.json');
+        await fs.writeFile(statusPath, JSON.stringify(getProcessingJob(processingId), null, 2));
+      } catch {}
 
       console.log(`Optimized processing completed successfully for ${processingId}`);
     }
@@ -370,6 +436,10 @@ async function processInBackground(processingId: string, config: ProcessingConfi
       message: `Processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
       endTime: new Date()
     });
+    try {
+      const statusPath = path.join(process.cwd(), 'public', 'outputs', processingId, 'status.json');
+      await fs.writeFile(statusPath, JSON.stringify(getProcessingJob(processingId), null, 2));
+    } catch {}
   }
 }
 
@@ -409,7 +479,7 @@ function runPythonScript(scriptName: string, configPath: string, processingId: s
     let stdout = '';
     let stderr = '';
 
-    pythonProcess.stdout.on('data', (data) => {
+    pythonProcess.stdout.on('data', async (data) => {
       const output = data.toString();
       stdout += output;
       console.log(`[${scriptName}] ${output.trim()}`);
@@ -427,6 +497,13 @@ function runPythonScript(scriptName: string, configPath: string, processingId: s
             updateProcessingJob(processingId, {
               progress: Math.round(totalProgress)
             });
+            // Persist progress to disk for cross-process visibility (SSE/file polling)
+            try {
+              const statusPath = path.join(process.cwd(), 'public', 'outputs', processingId, 'status.json');
+              await fs.writeFile(statusPath, JSON.stringify(getProcessingJob(processingId), null, 2));
+            } catch (e) {
+              console.warn('Failed to persist progress status:', e);
+            }
           }
         }
       }

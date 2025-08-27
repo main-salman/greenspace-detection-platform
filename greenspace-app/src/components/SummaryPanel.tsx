@@ -1,54 +1,95 @@
 'use client';
 
 import { CityAnnualSummary } from '@/types';
+import { safeToFixed, safePercentage } from '../lib/utils';
 
 interface SummaryPanelProps {
   summaries: CityAnnualSummary[];
 }
 
 export default function SummaryPanel({ summaries }: SummaryPanelProps) {
-  if (!summaries || summaries.length === 0) return null;
+  if (!Array.isArray(summaries) || (summaries?.length || 0) === 0) return null;
 
-  const downloadCSV = () => {
-    const headers = [
-      'city','country','baselineYear','compareYear','baselineVegetation','compareVegetation','percentChange','vegetationPct','cloudExcludedPct','highPct','medPct','lowPct'
-    ];
-    const rows = summaries.map(s => [
-      s.city.city, s.city.country, s.baselineYear, s.compareYear,
-      s.baselineVegetation?.toFixed(3), s.compareVegetation?.toFixed(3), s.percentChange?.toFixed(3),
-      (s.vegetationPct ?? 0).toFixed(3), (s.cloudExcludedPct ?? 0).toFixed(3), (s.highPct ?? 0).toFixed(3), (s.medPct ?? 0).toFixed(3), (s.lowPct ?? 0).toFixed(3)
-    ].join(','));
-    const csv = [headers.join(','), ...rows].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'greenspace_summary.csv'; a.click();
-    URL.revokeObjectURL(url);
+  // Filter for summaries with valid data to prevent toFixed errors
+  const validSummaries = summaries.filter(s => 
+    s && 
+    s.city && 
+    s.city.city && 
+    s.city.country &&
+    typeof s.baselineYear === 'number' &&
+    typeof s.compareYear === 'number'
+  );
+
+  // If no valid summaries, show a message
+  if (validSummaries.length === 0) {
+    return (
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="text-center text-gray-500">
+          <p>No valid summary data available for download.</p>
+          <p className="text-sm mt-2">Please ensure all required data fields are present.</p>
+        </div>
+      </div>
+    );
+  }
+
+
+
+    const downloadCSV = () => {
+    try {
+      const headers = [
+        'city','country','baselineYear','compareYear','baselineVegetation','compareVegetation','percentChange','vegetationPct','cloudExcludedPct','highPct','medPct','lowPct'
+      ];
+      const rows = validSummaries.map(s => [
+        s.city.city, s.city.country, s.baselineYear, s.compareYear,
+        safeToFixed(s.baselineVegetation, 3), 
+        safeToFixed(s.compareVegetation, 3), 
+        safeToFixed(s.percentChange, 3),
+        safeToFixed(s.vegetationPct, 3), 
+        safeToFixed(s.cloudExcludedPct, 3), 
+        safeToFixed(s.highPct, 3), 
+        safeToFixed(s.medPct, 3), 
+        safeToFixed(s.lowPct, 3)
+      ].join(','));
+      const csv = [headers.join(','), ...rows].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'greenspace_summary.csv'; a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error generating CSV:', error);
+      alert('Error generating CSV. Please check the console for details.');
+    }
   };
 
   const downloadDetailedCSV = () => {
-    const headers = [
-      'city','country','year','month','ndvi_mean','vegetation_pct','vegetation_hectares'
-    ];
-    const toRows = (s: CityAnnualSummary, label: 'baseline'|'compare') => {
-      const ndvi = label==='baseline' ? (s.monthlyNdviMeanBaseline||[]) : (s.monthlyNdviMeanCompare||[]);
-      const veg = label==='baseline' ? (s.monthlyVegBaseline||[]) : (s.monthlyVegCompare||[]);
-      const hect = label==='baseline' ? (s.monthlyHectaresBaseline||[]) : (s.monthlyHectaresCompare||[]);
-      const year = label==='baseline' ? s.baselineYear : s.compareYear;
-      return Array.from({length:12}, (_,i)=>i).map(m => [
-        s.city.city, s.city.country, year, m+1,
-        (ndvi[m] ?? '').toString(),
-        (veg[m] ?? '').toString(),
-        (hect[m] ?? '').toString()
-      ].join(','));
-    };
-    const rows = summaries.flatMap(s => [...toRows(s, 'baseline'), ...toRows(s, 'compare')]);
-    const csv = [headers.join(','), ...rows].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'greenspace_detailed_monthly.csv'; a.click();
-    URL.revokeObjectURL(url);
+    try {
+      const headers = [
+        'city','country','year','month','ndvi_mean','vegetation_pct','vegetation_hectares'
+      ];
+      const toRows = (s: CityAnnualSummary, label: 'baseline'|'compare') => {
+        const ndvi = label==='baseline' ? (s.monthlyNdviMeanBaseline||[]) : (s.monthlyNdviMeanCompare||[]);
+        const veg = label==='baseline' ? (s.monthlyVegBaseline||[]) : (s.monthlyVegCompare||[]);
+        const hect = label==='baseline' ? (s.monthlyHectaresBaseline||[]) : (s.monthlyHectaresCompare||[]);
+        const year = label==='baseline' ? s.baselineYear : s.compareYear;
+        return Array.from({length:12}, (_,i)=>i).map(m => [
+          s.city.city, s.city.country, year, m+1,
+          (ndvi[m] ?? '').toString(),
+          (veg[m] ?? '').toString(),
+          (hect[m] ?? '').toString()
+        ].join(','));
+      };
+      const rows = validSummaries.flatMap(s => [...toRows(s, 'baseline'), ...toRows(s, 'compare')]);
+      const csv = [headers.join(','), ...rows].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'greenspace_detailed_monthly.csv'; a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error generating detailed CSV:', error);
+      alert('Error generating detailed CSV. Please check the console for details.');
+    }
   };
 
   const Chart = ({ s }: { s: CityAnnualSummary }) => {
@@ -104,16 +145,16 @@ export default function SummaryPanel({ summaries }: SummaryPanelProps) {
             </tr>
           </thead>
           <tbody>
-            {summaries.map((s, idx) => (
+            {validSummaries.map((s, idx) => (
               <tr key={idx} className="border-b hover:bg-gray-50">
                 <td className="py-2 pr-4 whitespace-nowrap font-medium text-gray-800">{s.city.city}, {s.city.country}</td>
-                <td className="py-2 pr-4">{(s.baselineVegetation ?? 0).toFixed(1)}%</td>
-                <td className="py-2 pr-4">{(s.compareVegetation ?? 0).toFixed(1)}%</td>
-                <td className={`py-2 pr-4 ${((s.percentChange ?? 0) >= 0) ? 'text-green-600' : 'text-red-600'}`}>{(s.percentChange ?? 0).toFixed(1)}%</td>
-                <td className="py-2 pr-4">{(s.highPct ?? 0).toFixed(1)}%</td>
-                <td className="py-2 pr-4">{(s.medPct ?? 0).toFixed(1)}%</td>
-                <td className="py-2 pr-4">{(s.lowPct ?? 0).toFixed(1)}%</td>
-                <td className="py-2 pr-4">{(s.cloudExcludedPct ?? 0).toFixed(1)}%</td>
+                <td className="py-2 pr-4">{safeToFixed(s.baselineVegetation, 1)}%</td>
+                <td className="py-2 pr-4">{safeToFixed(s.compareVegetation, 1)}%</td>
+                <td className={`py-2 pr-4 ${((Number(s.percentChange) || 0) >= 0) ? 'text-green-600' : 'text-red-600'}`}>{safeToFixed(s.percentChange, 1)}%</td>
+                <td className="py-2 pr-4">{safeToFixed(s.highPct, 1)}%</td>
+                <td className="py-2 pr-4">{safeToFixed(s.medPct, 1)}%</td>
+                <td className="py-2 pr-4">{safeToFixed(s.lowPct, 1)}%</td>
+                <td className="py-2 pr-4">{safeToFixed(s.cloudExcludedPct, 1)}%</td>
               </tr>
             ))}
           </tbody>
@@ -121,12 +162,12 @@ export default function SummaryPanel({ summaries }: SummaryPanelProps) {
       </div>
 
       <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-        {summaries.map((s, idx) => (
+        {validSummaries.map((s, idx) => (
           <div key={idx} className="border border-gray-200 rounded-lg p-4">
             <div className="flex items-center justify-between mb-2">
               <div className="font-semibold text-gray-800">{s.city.city}, {s.city.country}</div>
               <div className={`${(s.percentChange ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'} text-sm font-semibold`}>
-                {(s.percentChange ?? 0) >= 0 ? '▲' : '▼'} {(s.percentChange ?? 0).toFixed(1)}%
+                {(Number(s.percentChange) || 0) >= 0 ? '▲' : '▼'} {safeToFixed(s.percentChange, 1)}%
               </div>
             </div>
             <Chart s={s} />

@@ -1,0 +1,8 @@
+rank,city,country,vegetation_2020,vegetation_2024,change_percentage,change_direction
+1,Manta,Ecuador,27.349667051424547,63.266068832081416,35.92,↗️ Increase
+2,San Fernando,Chile,3.4229053665511397,30.08781063985204,26.66,↗️ Increase
+3,Seoul,South Korea,0.1805307673071455,20.157442012626877,19.98,↗️ Increase
+4,Chancay,Peru,0.0,16.409765192640066,16.41,↗️ Increase
+5,Manchester,United Kingdom,33.89061298863992,29.785420759426394,-4.11,↘️ Decrease
+6,Dhaka,Bangladesh,43.064482228392535,41.518444828289184,-1.55,↘️ Decrease
+7,Iquique,Chile,0.018696031054424463,0.0,-0.02,↘️ Decrease

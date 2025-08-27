@@ -1,0 +1,38 @@
+{
+  "vegetation_percentage": 0.1805307673071455,
+  "high_density_percentage": 0.07673414018368235,
+  "medium_density_percentage": 0.04841558844922815,
+  "low_density_percentage": 0.05538103867423502,
+  "ndvi_mean": 0.33207663893699646,
+  "total_pixels": 875751,
+  "vegetation_pixels": 1581,
+  "images_processed": 1,
+  "images_found": 1,
+  "ndvi_threshold": 0.3,
+  "geographic_bounds": {
+    "west": 126.842566,
+    "south": 37.475908,
+    "east": 127.103148,
+    "north": 37.622078,
+    "crs": "EPSG:4326"
+  },
+  "city_info": {
+    "name": "Seoul, South Korea",
+    "center_lat": 37.548992999999996,
+    "center_lon": 126.972857
+  },
+  "processing_config": {
+    "ndvi_threshold": 0.3,
+    "cloud_threshold": 20,
+    "highlight_alpha": 0.6,
+    "date_range": "2020-07 to 2020-07"
+  },
+  "baseline_vegetation_2020": null,
+  "percent_change_vs_2020": null,
+  "cloud_excluded_percentage": 99.42403719778795,
+  "output_files": [
+    "vegetation_highlighted.png",
+    "ndvi_visualization.png",
+    "false_color_base.png"
+  ]
+}

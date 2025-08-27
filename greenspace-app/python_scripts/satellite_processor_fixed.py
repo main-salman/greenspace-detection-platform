@@ -383,17 +383,19 @@ class PerfectAlignmentSatelliteProcessor:
             items = list(search.items())
             print(f"📡 Found {len(items)} satellite images with relaxed criteria")
         
-        # If still no images, try with broader date range
+        # If still no images, try with broader date range limited to the target year
         if not items:
-            print("🔄 Still no images, trying broader date range (2020-2022)...")
+            print("🔄 Still no images, trying broader date range (target year, relaxed clouds < 50%)...")
+            year_start = datetime(self.start_year, 1, 1)
+            year_end = datetime(self.end_year, 12, 31)
             search = self.stac_client.search(
                 collections=["sentinel-2-l2a"],
                 bbox=[city_bounds['west'], city_bounds['south'], city_bounds['east'], city_bounds['north']],
-                datetime="2020-01-01/2022-12-31",
-                query={"eo:cloud_cover": {"lt": 30}}
+                datetime=f"{year_start.date()}/{year_end.date()}",
+                query={"eo:cloud_cover": {"lt": 50}}
             )
             items = list(search.items())
-            print(f"📡 Found {len(items)} satellite images with broader date range")
+            print(f"📡 Found {len(items)} satellite images within {self.start_year}")
         
         if not items:
             raise Exception("No satellite images found even with relaxed criteria")
@@ -761,12 +763,12 @@ class PerfectAlignmentSatelliteProcessor:
         subtle_vegetation = (ndvi >= 0.15) & (ndvi < enhanced_threshold) & city_mask  # Subtle inside city
         
         # Calculate statistics ONLY for pixels inside the city polygon
+        # Denominator should be stable across years: always use full city area
+        total_city_pixels = np.sum(city_mask)
         if 'scl' in bands_data and valid_quality_mask is not None:
-            total_city_pixels = np.sum(city_mask & valid_quality_mask)
             cloud_excluded_pixels = np.sum(city_mask & ~valid_quality_mask)
-            cloud_excluded_percentage = (cloud_excluded_pixels / (np.sum(city_mask) or 1)) * 100.0
+            cloud_excluded_percentage = (cloud_excluded_pixels / (total_city_pixels or 1)) * 100.0
         else:
-            total_city_pixels = np.sum(city_mask)
             cloud_excluded_percentage = 0.0
         vegetation_pixels = np.sum(vegetation_mask)
         vegetation_percentage = (vegetation_pixels / total_city_pixels) * 100 if total_city_pixels > 0 else 0

@@ -1,0 +1,1 @@
+city_id,city,country,state_province,latitude,longitude,status,processing_time_seconds,vegetation_percentage,high_density_percentage,medium_density_percentage,low_density_percentage,total_pixels,vegetation_pixels,ndvi_mean,images_processed,images_found,output_files_count,error_message

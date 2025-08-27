@@ -1,0 +1,38 @@
+{
+  "vegetation_percentage": 26.374471282333772,
+  "high_density_percentage": 0.4144095394000502,
+  "medium_density_percentage": 4.163755029265605,
+  "low_density_percentage": 21.796306713668116,
+  "ndvi_mean": 0.25367239117622375,
+  "total_pixels": 513743,
+  "vegetation_pixels": 135497,
+  "images_processed": 1,
+  "images_found": 1,
+  "ndvi_threshold": 0.3,
+  "geographic_bounds": {
+    "west": -80.927964,
+    "south": -1.155546,
+    "east": -80.638962,
+    "north": -0.91526,
+    "crs": "EPSG:4326"
+  },
+  "city_info": {
+    "name": "Manta, Ecuador",
+    "center_lat": -1.035403,
+    "center_lon": -80.78346300000001
+  },
+  "processing_config": {
+    "ndvi_threshold": 0.3,
+    "cloud_threshold": 20,
+    "highlight_alpha": 0.6,
+    "date_range": "2024-10 to 2024-10"
+  },
+  "baseline_vegetation_2020": 6.138477799210889,
+  "percent_change_vs_2020": 329.658168442415,
+  "cloud_excluded_percentage": 40.15743280200412,
+  "output_files": [
+    "vegetation_highlighted.png",
+    "ndvi_visualization.png",
+    "false_color_base.png"
+  ]
+}

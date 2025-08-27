@@ -1,0 +1,38 @@
+{
+  "vegetation_percentage": 2.824750587434828,
+  "high_density_percentage": 0.8794512527987216,
+  "medium_density_percentage": 1.1881611114187836,
+  "low_density_percentage": 0.7571382232173232,
+  "ndvi_mean": 0.08921916037797928,
+  "total_pixels": 631985,
+  "vegetation_pixels": 17852,
+  "images_processed": 1,
+  "images_found": 1,
+  "ndvi_threshold": 0.3,
+  "geographic_bounds": {
+    "west": 37.88764,
+    "south": 26.475983,
+    "east": 38.029776,
+    "north": 26.656849,
+    "crs": "EPSG:4326"
+  },
+  "city_info": {
+    "name": "Al Ula, Saudi Arabia",
+    "center_lat": 26.566416,
+    "center_lon": 37.958708
+  },
+  "processing_config": {
+    "ndvi_threshold": 0.3,
+    "cloud_threshold": 20,
+    "highlight_alpha": 0.6,
+    "date_range": "2020-07 to 2020-07"
+  },
+  "baseline_vegetation_2020": null,
+  "percent_change_vs_2020": null,
+  "cloud_excluded_percentage": 0.0,
+  "output_files": [
+    "vegetation_highlighted.png",
+    "ndvi_visualization.png",
+    "false_color_base.png"
+  ]
+}

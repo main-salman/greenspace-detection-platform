@@ -1,0 +1,38 @@
+{
+  "vegetation_percentage": 90.54397451275074,
+  "high_density_percentage": 59.6549075755349,
+  "medium_density_percentage": 23.719829895367635,
+  "low_density_percentage": 7.169237041848205,
+  "ndvi_mean": 0.6154628396034241,
+  "total_pixels": 421858,
+  "vegetation_pixels": 381967,
+  "images_processed": 1,
+  "images_found": 1,
+  "ndvi_threshold": 0.3,
+  "geographic_bounds": {
+    "west": 152.900848,
+    "south": -27.829361,
+    "east": 153.240051,
+    "north": -27.572808,
+    "crs": "EPSG:4326"
+  },
+  "city_info": {
+    "name": "Logan, Australia",
+    "center_lat": -27.7010845,
+    "center_lon": 153.0704495
+  },
+  "processing_config": {
+    "ndvi_threshold": 0.3,
+    "cloud_threshold": 20,
+    "highlight_alpha": 0.6,
+    "date_range": "2024-07 to 2024-07"
+  },
+  "baseline_vegetation_2020": 93.63883135428594,
+  "percent_change_vs_2020": -3.305099814654564,
+  "cloud_excluded_percentage": 27.6722690948618,
+  "output_files": [
+    "vegetation_highlighted.png",
+    "ndvi_visualization.png",
+    "false_color_base.png"
+  ]
+}

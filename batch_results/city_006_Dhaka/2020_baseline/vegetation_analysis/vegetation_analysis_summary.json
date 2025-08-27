@@ -1,0 +1,38 @@
+{
+  "vegetation_percentage": 43.064482228392535,
+  "high_density_percentage": 15.787344396700902,
+  "medium_density_percentage": 15.981408991132765,
+  "low_density_percentage": 11.295728840558867,
+  "ndvi_mean": 0.3538266122341156,
+  "total_pixels": 632779,
+  "vegetation_pixels": 272503,
+  "images_processed": 1,
+  "images_found": 1,
+  "ndvi_threshold": 0.3,
+  "geographic_bounds": {
+    "west": 90.308905,
+    "south": 23.669675,
+    "east": 90.479193,
+    "north": 23.883006,
+    "crs": "EPSG:4326"
+  },
+  "city_info": {
+    "name": "Dhaka, Bangladesh",
+    "center_lat": 23.776340500000003,
+    "center_lon": 90.394049
+  },
+  "processing_config": {
+    "ndvi_threshold": 0.3,
+    "cloud_threshold": 20,
+    "highlight_alpha": 0.6,
+    "date_range": "2020-07 to 2020-07"
+  },
+  "baseline_vegetation_2020": null,
+  "percent_change_vs_2020": null,
+  "cloud_excluded_percentage": 7.4247091006496735,
+  "output_files": [
+    "vegetation_highlighted.png",
+    "ndvi_visualization.png",
+    "false_color_base.png"
+  ]
+}

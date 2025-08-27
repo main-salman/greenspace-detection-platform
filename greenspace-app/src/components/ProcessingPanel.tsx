@@ -2,7 +2,7 @@
 
 import { ProcessingStatus } from '@/types';
 import { useState } from 'react';
-import { formatDistanceToNow } from 'date-fns';
+import { safeToFixed, safePercentage, formatTimeAgo } from '../lib/utils';
 
 interface ProcessingPanelProps {
   status: ProcessingStatus;
@@ -34,7 +34,7 @@ export default function ProcessingPanel({ status }: ProcessingPanelProps) {
     }
   };
 
-  const elapsedTime = formatDistanceToNow(new Date(status.startTime), { addSuffix: true });
+  const elapsedTime = formatTimeAgo(status.startTime);
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-6">
@@ -53,7 +53,7 @@ export default function ProcessingPanel({ status }: ProcessingPanelProps) {
           <div className="text-right text-sm">
             <p>Started {elapsedTime}</p>
             {status.endTime && (
-              <p>Completed {formatDistanceToNow(new Date(status.endTime), { addSuffix: true })}</p>
+              <p>Completed {formatTimeAgo(status.endTime)}</p>
             )}
           </div>
         </div>
@@ -119,10 +119,10 @@ export default function ProcessingPanel({ status }: ProcessingPanelProps) {
       </div>
 
       {/* Grouped by City: Month Timeline + Live Previews */}
-      {status.result?.previews && status.result.previews.length > 0 && (
+      {Array.isArray((status as any)?.result?.previews) && (((status as any).result?.previews?.length) || 0) > 0 && (
         <div className="mt-6 space-y-8">
           {(() => {
-            const previews = status.result?.previews || [];
+            const previews = (status as any).result?.previews || [];
             const groups: Record<string, typeof previews> = {};
             for (const p of previews) {
               const cityKey = (p as any).cityName || 'Selected City';
@@ -184,11 +184,11 @@ export default function ProcessingPanel({ status }: ProcessingPanelProps) {
       )}
 
       {/* Running annual average */}
-      {status.result?.previews && status.result.previews.length > 0 && (
+      {Array.isArray((status as any)?.result?.previews) && (((status as any).result?.previews?.length) || 0) > 0 && (
         <div className="mt-6">
           <h4 className="font-semibold text-gray-700 mb-2">Running Annual Average</h4>
           {(() => {
-            const previews = status.result?.previews || [];
+            const previews = (status as any).result?.previews || [];
             const byType = (t: 'baseline'|'compare') => Array.from(new Set(previews.filter(p=>p.type===t).map(p=>p.month)))
               .map(m => previews.find(p=>p.type===t && p.month===m))
               .filter(Boolean) as any[];
@@ -202,15 +202,15 @@ export default function ProcessingPanel({ status }: ProcessingPanelProps) {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="bg-gray-50 p-4 rounded text-center">
                   <div className="text-sm text-gray-600">Baseline avg (so far)</div>
-                  <div className="text-2xl font-bold text-gray-800">{Number(baseAvg ?? 0).toFixed(1)}%</div>
+                  <div className="text-2xl font-bold text-gray-800">{safePercentage(baseAvg, 1)}</div>
                 </div>
                 <div className="text-center flex flex-col justify-center">
                   <div className="text-sm text-gray-600">Change (so far)</div>
-                  <div className={`text-2xl font-bold ${delta>=0?'text-green-600':'text-red-600'}`}>{delta>=0?'▲':'▼'} {Number(delta ?? 0).toFixed(1)}%</div>
+                                      <div className={`text-2xl font-bold ${delta>=0?'text-green-600':'text-red-600'}`}>{delta>=0?'▲':'▼'} {safePercentage(delta, 1)}</div>
                 </div>
                 <div className="bg-gray-50 p-4 rounded text-center">
                   <div className="text-sm text-gray-600">Compare avg (so far)</div>
-                  <div className="text-2xl font-bold text-gray-800">{Number(compAvg ?? 0).toFixed(1)}%</div>
+                  <div className="text-2xl font-bold text-gray-800">{safePercentage(compAvg, 1)}</div>
                 </div>
               </div>
             );
@@ -267,7 +267,7 @@ export default function ProcessingPanel({ status }: ProcessingPanelProps) {
             <div className="col-span-2">
               <span className="text-gray-600">Vegetation Coverage:</span>
               <span className="font-medium ml-2 text-green-600">
-                {Number(status.result?.vegetationPercentage ?? 0).toFixed(1)}%
+                {safePercentage(status.result?.vegetationPercentage, 1)}
               </span>
             </div>
           </div>

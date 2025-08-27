@@ -1,0 +1,38 @@
+{
+  "vegetation_percentage": 22.800115946830097,
+  "high_density_percentage": 6.509586318274048,
+  "medium_density_percentage": 9.815106215578284,
+  "low_density_percentage": 6.475423412977762,
+  "ndvi_mean": 0.060005538165569305,
+  "total_pixels": 96596,
+  "vegetation_pixels": 22024,
+  "images_processed": 1,
+  "images_found": 1,
+  "ndvi_threshold": 0.3,
+  "geographic_bounds": {
+    "west": -71.078646,
+    "south": -35.023354,
+    "east": -70.225832,
+    "north": -34.470441,
+    "crs": "EPSG:4326"
+  },
+  "city_info": {
+    "name": "San Fernando, Chile",
+    "center_lat": -34.7468975,
+    "center_lon": -70.65223900000001
+  },
+  "processing_config": {
+    "ndvi_threshold": 0.3,
+    "cloud_threshold": 20,
+    "highlight_alpha": 0.6,
+    "date_range": "2020-07 to 2020-07"
+  },
+  "baseline_vegetation_2020": null,
+  "percent_change_vs_2020": null,
+  "cloud_excluded_percentage": 84.98733350947268,
+  "output_files": [
+    "vegetation_highlighted.png",
+    "ndvi_visualization.png",
+    "false_color_base.png"
+  ]
+}

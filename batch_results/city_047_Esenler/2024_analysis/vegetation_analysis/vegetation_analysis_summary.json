@@ -1,0 +1,38 @@
+{
+  "vegetation_percentage": 18.904106431702978,
+  "high_density_percentage": 3.979829210109102,
+  "medium_density_percentage": 8.160180964187463,
+  "low_density_percentage": 6.76409625740641,
+  "ndvi_mean": 0.15527358651161194,
+  "total_pixels": 607413,
+  "vegetation_pixels": 114826,
+  "images_processed": 1,
+  "images_found": 1,
+  "ndvi_threshold": 0.3,
+  "geographic_bounds": {
+    "west": 28.852415,
+    "south": 41.02721,
+    "east": 28.89945,
+    "north": 41.061648,
+    "crs": "EPSG:4326"
+  },
+  "city_info": {
+    "name": "Esenler, Turkey",
+    "center_lat": 41.044428999999994,
+    "center_lon": 28.8759325
+  },
+  "processing_config": {
+    "ndvi_threshold": 0.3,
+    "cloud_threshold": 20,
+    "highlight_alpha": 0.6,
+    "date_range": "2024-07 to 2024-07"
+  },
+  "baseline_vegetation_2020": 20.944313116081833,
+  "percent_change_vs_2020": -9.741100952183091,
+  "cloud_excluded_percentage": 0.009053974859581081,
+  "output_files": [
+    "vegetation_highlighted.png",
+    "ndvi_visualization.png",
+    "false_color_base.png"
+  ]
+}

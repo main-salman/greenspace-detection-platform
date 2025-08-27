@@ -38,7 +38,7 @@ export async function GET(
     }
 
     console.log(`Returning status for ${processingId}:`, status);
-    return NextResponse.json(status);
+    return NextResponse.json(status, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
     console.error('Error getting status:', error);
     return NextResponse.json(
@@ -47,3 +47,14 @@ export async function GET(
     );
   }
 } 
+
+// Allow static export builds to proceed by declaring no pre-rendered params
+export function generateStaticParams() {
+  return [] as { id: string }[];
+}
+
+// Ensure Node.js runtime for file system access and SSE compatibility
+export const runtime = 'nodejs';
+// Disable caching/static optimization
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;

@@ -1,0 +1,38 @@
+{
+  "vegetation_percentage": 80.11961848553513,
+  "high_density_percentage": 20.15123570638141,
+  "medium_density_percentage": 35.49120865609247,
+  "low_density_percentage": 24.47717412306125,
+  "ndvi_mean": 0.433040589094162,
+  "total_pixels": 569310,
+  "vegetation_pixels": 456129,
+  "images_processed": 1,
+  "images_found": 1,
+  "ndvi_threshold": 0.3,
+  "geographic_bounds": {
+    "west": -80.569611,
+    "south": -1.212525,
+    "east": -80.297699,
+    "north": -0.9132,
+    "crs": "EPSG:4326"
+  },
+  "city_info": {
+    "name": "Portoviejo, Ecuador",
+    "center_lat": -1.0628625,
+    "center_lon": -80.43365499999999
+  },
+  "processing_config": {
+    "ndvi_threshold": 0.3,
+    "cloud_threshold": 20,
+    "highlight_alpha": 0.6,
+    "date_range": "2020-07 to 2020-07"
+  },
+  "baseline_vegetation_2020": null,
+  "percent_change_vs_2020": null,
+  "cloud_excluded_percentage": 3.3383590391393816,
+  "output_files": [
+    "vegetation_highlighted.png",
+    "ndvi_visualization.png",
+    "false_color_base.png"
+  ]
+}

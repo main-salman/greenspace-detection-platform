@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { ProcessingStatus } from '@/types';
 import { City } from '@/types';
 import SummaryPanel from './SummaryPanel';
+import { safeToFixed, safePercentage, safeDecimal } from '../lib/utils';
 
 // Dynamic import to prevent SSR issues with Leaflet
 const VegetationMap = dynamic(() => import('./VegetationMap'), {
@@ -29,17 +30,18 @@ interface ResultsPanelProps {
 export default function ResultsPanel({ status, selectedCity }: ResultsPanelProps) {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
-  // Get the result from status, with fallback values
-  const result = status.result || {
+  // Get the result from status and MERGE with sensible defaults so missing arrays do not crash UI
+  const defaultResult = {
     downloadedImages: 0,
     processedComposites: 0,
     vegetationPercentage: 0,
     highDensityPercentage: 0,
     mediumDensityPercentage: 0,
     lowDensityPercentage: 0,
-    outputFiles: [],
-    summary: undefined
+    outputFiles: [] as string[],
+    summary: undefined as any
   };
+  const result = { ...defaultResult, ...(status.result || {}) };
 
   // Get enhanced summary data
   const summary = result.summary;
@@ -94,7 +96,7 @@ export default function ResultsPanel({ status, selectedCity }: ResultsPanelProps
             </div>
             
             <div className="bg-green-50 rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold text-green-600">{result.vegetationPercentage.toFixed(1)}%</div>
+              <div className="text-2xl font-bold text-green-600">{safePercentage(result.vegetationPercentage, 1)}</div>
               <div className="text-sm text-green-700">Total Vegetation</div>
             </div>
 
@@ -113,17 +115,17 @@ export default function ResultsPanel({ status, selectedCity }: ResultsPanelProps
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
                 <div className="bg-gray-50 rounded-lg p-4 text-center">
                   <div className="text-sm text-gray-600">Baseline {annual.baselineYear}</div>
-                  <div className="text-3xl font-bold text-gray-800">{annual.baselineVegetation.toFixed(1)}%</div>
+                  <div className="text-3xl font-bold text-gray-800">{safePercentage(annual.baselineVegetation, 1)}</div>
                 </div>
                 <div className="text-center">
                   <div className="text-sm text-gray-600">Change</div>
                   <div className={`text-3xl font-bold ${annual.percentChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {annual.percentChange >= 0 ? '▲' : '▼'} {annual.percentChange.toFixed(1)}%
+                    {annual.percentChange >= 0 ? '▲' : '▼'} {safePercentage(annual.percentChange, 1)}
                   </div>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-4 text-center">
                   <div className="text-sm text-gray-600">Compare {annual.compareYear}</div>
-                  <div className="text-3xl font-bold text-gray-800">{annual.compareVegetation.toFixed(1)}%</div>
+                  <div className="text-3xl font-bold text-gray-800">{safePercentage(annual.compareVegetation, 1)}</div>
                 </div>
               </div>
             </div>
@@ -147,7 +149,7 @@ export default function ResultsPanel({ status, selectedCity }: ResultsPanelProps
                   <span className="font-medium">High Density</span>
                 </div>
                 <div className="text-2xl font-bold text-green-600">
-                  {(result.highDensityPercentage || 0).toFixed(1)}%
+                  {safePercentage(result.highDensityPercentage, 1)}
                 </div>
                 <div className="text-xs text-gray-600">NDVI &gt; 0.7</div>
                 <div className="text-xs text-green-700 mt-1">Dense, healthy vegetation</div>
@@ -159,7 +161,7 @@ export default function ResultsPanel({ status, selectedCity }: ResultsPanelProps
                   <span className="font-medium">Medium Density</span>
                 </div>
                 <div className="text-2xl font-bold text-yellow-600">
-                  {(result.mediumDensityPercentage || 0).toFixed(1)}%
+                  {safePercentage(result.mediumDensityPercentage, 1)}
                 </div>
                 <div className="text-xs text-gray-600">NDVI 0.5-0.7</div>
                 <div className="text-xs text-yellow-700 mt-1">Moderate vegetation</div>
@@ -171,7 +173,7 @@ export default function ResultsPanel({ status, selectedCity }: ResultsPanelProps
                   <span className="font-medium">Low Density</span>
                 </div>
                 <div className="text-2xl font-bold text-green-500">
-                  {(result.lowDensityPercentage || 0).toFixed(1)}%
+                  {safePercentage(result.lowDensityPercentage, 1)}
                 </div>
                 <div className="text-xs text-gray-600">
                   NDVI {hasEnhancedData ? summary?.processing_config?.ndvi_threshold : '0.3'}-0.5
@@ -184,24 +186,24 @@ export default function ResultsPanel({ status, selectedCity }: ResultsPanelProps
             <div className="mt-4">
               <div className="flex items-center justify-between text-sm text-gray-600 mb-1">
                 <span>Vegetation Coverage Distribution</span>
-                <span>{result.vegetationPercentage.toFixed(1)}% Total</span>
+                <span>{safePercentage(result.vegetationPercentage, 1)} Total</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                 <div className="h-full flex">
                   <div 
                     className="bg-green-500 h-full" 
                     style={{ width: `${(result.highDensityPercentage || 0)}%` }}
-                    title={`High Density: ${(result.highDensityPercentage || 0).toFixed(1)}%`}
+                    title={`High Density: ${safePercentage(result.highDensityPercentage, 1)}`}
                   ></div>
                   <div 
                     className="bg-yellow-500 h-full" 
                     style={{ width: `${(result.mediumDensityPercentage || 0)}%` }}
-                    title={`Medium Density: ${(result.mediumDensityPercentage || 0).toFixed(1)}%`}
+                    title={`Medium Density: ${safePercentage(result.mediumDensityPercentage, 1)}`}
                   ></div>
                   <div 
                     className="bg-green-300 h-full" 
                     style={{ width: `${(result.lowDensityPercentage || 0)}%` }}
-                    title={`Low Density: ${(result.lowDensityPercentage || 0).toFixed(1)}%`}
+                    title={`Low Density: ${safePercentage(result.lowDensityPercentage, 1)}`}
                   ></div>
                 </div>
               </div>
@@ -236,13 +238,13 @@ export default function ResultsPanel({ status, selectedCity }: ResultsPanelProps
                         <div className="flex justify-between">
                           <span className="text-gray-600">Geographic Bounds:</span>
                           <span className="font-medium text-xs">
-                            {summary.geographic_bounds.north.toFixed(3)}°N, {summary.geographic_bounds.south.toFixed(3)}°S
+                            {safeDecimal(summary.geographic_bounds.north, 3)}°N, {safeDecimal(summary.geographic_bounds.south, 3)}°S
                           </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Coverage Area:</span>
                           <span className="font-medium text-xs">
-                            {summary.geographic_bounds.east.toFixed(3)}°E, {summary.geographic_bounds.west.toFixed(3)}°W
+                            {safeDecimal(summary.geographic_bounds.east, 3)}°E, {safeDecimal(summary.geographic_bounds.west, 3)}°W
                           </span>
                         </div>
                       </>
@@ -251,7 +253,7 @@ export default function ResultsPanel({ status, selectedCity }: ResultsPanelProps
                       <div className="flex justify-between">
                         <span className="text-gray-600">Analysis Center:</span>
                         <span className="font-medium text-xs">
-                          {summary.city_info.center_lat.toFixed(3)}, {summary.city_info.center_lon.toFixed(3)}
+                          {safeDecimal(summary.city_info.center_lat, 3)}, {safeDecimal(summary.city_info.center_lon, 3)}
                         </span>
                       </div>
                     )}
@@ -274,7 +276,7 @@ export default function ResultsPanel({ status, selectedCity }: ResultsPanelProps
           <div className="mb-6">
             <h3 className="font-semibold text-gray-800 mb-4">📁 Generated Files</h3>
             
-            {result.outputFiles.length === 0 ? (
+            {(Array.isArray(result.outputFiles) ? result.outputFiles.length : 0) === 0 ? (
               <p className="text-gray-500 text-center py-4">No output files available</p>
             ) : (
               <div className="space-y-3">
@@ -337,8 +339,8 @@ export default function ResultsPanel({ status, selectedCity }: ResultsPanelProps
           </div>
 
           {/* Batch Summary for Multi-City */}
-          {status.result?.batchSummaries && status.result.batchSummaries.length > 0 && (
-            <SummaryPanel summaries={status.result.batchSummaries as any} />
+          {Array.isArray((status as any)?.result?.batchSummaries) && ((status as any).result.batchSummaries?.length || 0) > 0 && (
+            <SummaryPanel summaries={(status as any).result.batchSummaries as any} />
           )}
 
           {/* Enhanced Vegetation Analysis Insights */}
@@ -349,7 +351,7 @@ export default function ResultsPanel({ status, selectedCity }: ResultsPanelProps
                 <div>
                   <p className="font-medium mb-2">Coverage Analysis:</p>
                   <p>
-                    <strong>{result.vegetationPercentage.toFixed(1)}%</strong> of the analyzed area 
+                    <strong>{safePercentage(result.vegetationPercentage, 1)}</strong> of the analyzed area 
                     shows vegetation with enhanced multi-index detection.
                   </p>
                   
@@ -373,9 +375,9 @@ export default function ResultsPanel({ status, selectedCity }: ResultsPanelProps
                 <div>
                   <p className="font-medium mb-2">Density Distribution:</p>
                   <div className="space-y-1">
-                    <p>🟢 <strong>Dense vegetation:</strong> {(result.highDensityPercentage || 0).toFixed(1)}% (forests, parks)</p>
-                    <p>🟡 <strong>Moderate vegetation:</strong> {(result.mediumDensityPercentage || 0).toFixed(1)}% (gardens, lawns)</p>
-                    <p>🟢 <strong>Sparse vegetation:</strong> {(result.lowDensityPercentage || 0).toFixed(1)}% (scattered plants)</p>
+                    <p>🟢 <strong>Dense vegetation:</strong> {safePercentage(result.highDensityPercentage, 1)} (forests, parks)</p>
+                    <p>🟡 <strong>Moderate vegetation:</strong> {safePercentage(result.mediumDensityPercentage, 1)} (gardens, lawns)</p>
+                    <p>🟢 <strong>Sparse vegetation:</strong> {safePercentage(result.lowDensityPercentage, 1)} (scattered plants)</p>
                   </div>
                   
                   {(result.highDensityPercentage || 0) > 10 && (

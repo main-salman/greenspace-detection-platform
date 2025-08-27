@@ -1,0 +1,21 @@
+metric,value
+Total Cities Processed,51
+Successful Cities,51
+Failed Cities,0
+Average Vegetation % (2020),48.16
+Median Vegetation % (2020),46.52
+Min Vegetation % (2020),0.0
+Max Vegetation % (2020),99.15
+Average Vegetation % (2024),48.86
+Median Vegetation % (2024),52.0
+Min Vegetation % (2024),0.0
+Max Vegetation % (2024),98.93
+Average Change % (2020→2024),8.26
+Median Change % (2020→2024),-0.99
+Min Change % (2020→2024),-100.0
+Max Change % (2020→2024),184.96
+Cities with Increased Vegetation,18
+Cities with Decreased Vegetation,30
+Cities with No Change,3
+Total Processing Time (hours),0.96
+Average Processing Time (seconds),67.93

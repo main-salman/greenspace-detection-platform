@@ -7,6 +7,7 @@
     "dev:frontend": "next dev",
     "dev:backend": "cd .. && source alignment_venv/bin/activate && python web_alignment_tester.py",
     "build": "next build",
+    "export": "next build",
     "start": "next start",
     "lint": "next lint",
     "setup": "echo 'Creating Python virtual environment...' && python3 -m venv venv && echo 'Installing Python dependencies...' && source venv/bin/activate && pip install -r python_scripts/requirements.txt && echo 'Setup complete! Run npm run dev to start the application.'"
@@ -21,6 +22,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-leaflet": "^4.2.1",
+    "react-leaflet-draw": "^0.20.6",
     "sharp": "^0.33.5",
     "uuid": "^9.0.1"
   },

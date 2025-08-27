@@ -1,0 +1,38 @@
+{
+  "vegetation_percentage": 29.013883040232074,
+  "high_density_percentage": 0.5196280922684099,
+  "medium_density_percentage": 8.850521700187826,
+  "low_density_percentage": 19.643733247775838,
+  "ndvi_mean": 0.21023179590702057,
+  "total_pixels": 748035,
+  "vegetation_pixels": 217034,
+  "images_processed": 1,
+  "images_found": 1,
+  "ndvi_threshold": 0.3,
+  "geographic_bounds": {
+    "west": 35.133339,
+    "south": 31.867726,
+    "east": 35.255864,
+    "north": 32.011942,
+    "crs": "EPSG:4326"
+  },
+  "city_info": {
+    "name": "Ramallah, Palestine",
+    "center_lat": 31.939833999999998,
+    "center_lon": 35.194601500000005
+  },
+  "processing_config": {
+    "ndvi_threshold": 0.3,
+    "cloud_threshold": 20,
+    "highlight_alpha": 0.6,
+    "date_range": "2024-07 to 2024-07"
+  },
+  "baseline_vegetation_2020": 39.955349682835696,
+  "percent_change_vs_2020": -27.384234475374736,
+  "cloud_excluded_percentage": 0.0,
+  "output_files": [
+    "vegetation_highlighted.png",
+    "ndvi_visualization.png",
+    "false_color_base.png"
+  ]
+}

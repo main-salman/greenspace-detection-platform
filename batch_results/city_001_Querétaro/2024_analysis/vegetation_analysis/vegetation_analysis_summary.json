@@ -1,0 +1,38 @@
+{
+  "vegetation_percentage": 24.105993589626717,
+  "high_density_percentage": 4.904956553129888,
+  "medium_density_percentage": 10.368359447643147,
+  "low_density_percentage": 8.83267758885368,
+  "ndvi_mean": 0.2395964115858078,
+  "total_pixels": 548486,
+  "vegetation_pixels": 132218,
+  "images_processed": 1,
+  "images_found": 1,
+  "ndvi_threshold": 0.3,
+  "geographic_bounds": {
+    "west": -100.444871,
+    "south": 20.534434,
+    "east": -100.356637,
+    "north": 20.642393,
+    "crs": "EPSG:4326"
+  },
+  "city_info": {
+    "name": "Quer\u00e9taro, Mexico",
+    "center_lat": 20.5884135,
+    "center_lon": -100.400754
+  },
+  "processing_config": {
+    "ndvi_threshold": 0.3,
+    "cloud_threshold": 20,
+    "highlight_alpha": 0.6,
+    "date_range": "2024-07 to 2024-07"
+  },
+  "baseline_vegetation_2020": 27.77234230930896,
+  "percent_change_vs_2020": -13.20143860697456,
+  "cloud_excluded_percentage": 2.050124471842933,
+  "output_files": [
+    "vegetation_highlighted.png",
+    "ndvi_visualization.png",
+    "false_color_base.png"
+  ]
+}

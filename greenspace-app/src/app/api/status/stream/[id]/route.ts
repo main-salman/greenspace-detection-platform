@@ -80,5 +80,15 @@ export async function GET(
   });
 }
 
+// Allow static export builds to proceed by declaring no pre-rendered params
+export function generateStaticParams() {
+  return [] as { id: string }[];
+}
+
+// Force Node.js runtime for SSE streaming
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 
 

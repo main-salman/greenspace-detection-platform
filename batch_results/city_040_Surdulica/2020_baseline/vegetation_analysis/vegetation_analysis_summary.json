@@ -1,0 +1,38 @@
+{
+  "vegetation_percentage": 99.14500847402844,
+  "high_density_percentage": 93.50183955277366,
+  "medium_density_percentage": 4.56220330360631,
+  "low_density_percentage": 1.080965617648464,
+  "ndvi_mean": 0.815212607383728,
+  "total_pixels": 711586,
+  "vegetation_pixels": 705502,
+  "images_processed": 1,
+  "images_found": 1,
+  "ndvi_threshold": 0.3,
+  "geographic_bounds": {
+    "west": 22.083464,
+    "south": 42.643803,
+    "east": 22.231436,
+    "north": 42.716493,
+    "crs": "EPSG:4326"
+  },
+  "city_info": {
+    "name": "Surdulica, Serbia",
+    "center_lat": 42.680148,
+    "center_lon": 22.157449999999997
+  },
+  "processing_config": {
+    "ndvi_threshold": 0.3,
+    "cloud_threshold": 20,
+    "highlight_alpha": 0.6,
+    "date_range": "2020-07 to 2020-07"
+  },
+  "baseline_vegetation_2020": null,
+  "percent_change_vs_2020": null,
+  "cloud_excluded_percentage": 0.07175988664465656,
+  "output_files": [
+    "vegetation_highlighted.png",
+    "ndvi_visualization.png",
+    "false_color_base.png"
+  ]
+}

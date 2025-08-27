@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { City } from '@/types';
+import { safeDecimal } from '../lib/utils';
 
 interface CitySelectorProps {
   cities: City[];
@@ -80,13 +81,13 @@ export default function CitySelector({ cities, selectedCity, onCitySelect, multi
             <p><strong>{selectedCity.city}</strong>, {selectedCity.state_province}</p>
             <p>{selectedCity.country}</p>
             <p className="text-xs mt-1">
-              📍 {parseFloat(selectedCity.latitude).toFixed(4)}, {parseFloat(selectedCity.longitude).toFixed(4)}
+              📍 {safeDecimal(parseFloat(selectedCity.latitude), 4)}, {safeDecimal(parseFloat(selectedCity.longitude), 4)}
             </p>
           </div>
         </div>
       )}
 
-      {multiSelect && selectedCities.length > 0 && (
+      {multiSelect && Array.isArray(selectedCities) && selectedCities.length > 0 && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
           <h3 className="font-semibold text-green-800 mb-2">Selected Cities ({selectedCities.length})</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-green-700">
@@ -129,7 +130,7 @@ export default function CitySelector({ cities, selectedCity, onCitySelect, multi
                   {city.state_province}, {city.country}
                 </div>
                 <div className="text-xs text-gray-400 mt-1">
-                  📍 {parseFloat(city.latitude).toFixed(2)}, {parseFloat(city.longitude).toFixed(2)}
+                  📍 {safeDecimal(parseFloat(city.latitude), 2)}, {safeDecimal(parseFloat(city.longitude), 2)}
                 </div>
               </button>
             ))}

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { ProcessingStatus, City, ProcessingConfig } from '@/types';
+import { safeToFixed, safePercentage } from '../lib/utils';
 
 interface NDVIMapProps {
   status: ProcessingStatus;
@@ -218,7 +219,7 @@ export default function NDVIMap({ status, city, config }: NDVIMapProps) {
             </div>
             </div>
                          <div class="mt-2 pt-2 border-t text-xs text-gray-600">
-               Total Vegetation: ${status.result?.vegetationPercentage?.toFixed(1) || 0}%
+               Total Vegetation: ${safePercentage(status.result?.vegetationPercentage, 1)}
              </div>
           </div>
         `);
@@ -326,20 +327,20 @@ export default function NDVIMap({ status, city, config }: NDVIMapProps) {
           content += `
             <div style="font-size: 12px; color: #4b5563; line-height: 1.4;">
               <div style="margin-bottom: 6px;">
-                                 <span style="font-weight: 500;">Vegetation Coverage:</span> ${status.result?.vegetationPercentage?.toFixed(1) || 0}%
+                                 <span style="font-weight: 500;">Vegetation Coverage:</span> ${safePercentage(status.result?.vegetationPercentage, 1)}
                </div>
                ${status.result?.highDensityPercentage ? `
                  <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
                    <span style="color: #059669;">🟢 High:</span>
-                   <span>${status.result.highDensityPercentage.toFixed(1)}%</span>
+                   <span>${safePercentage(status.result.highDensityPercentage, 1)}</span>
                  </div>
                  <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
                    <span style="color: #d97706;">🟡 Medium:</span>
-                   <span>${status.result.mediumDensityPercentage?.toFixed(1) || 0}%</span>
+                   <span>${safePercentage(status.result.mediumDensityPercentage, 1)}</span>
                  </div>
                  <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
                    <span style="color: #7c3aed;">🟣 Low:</span>
-                   <span>${status.result.lowDensityPercentage?.toFixed(1) || 0}%</span>
+                   <span>${safePercentage(status.result.lowDensityPercentage, 1)}</span>
                  </div>
                ` : ''}
                <div style="padding-top: 6px; border-top: 1px solid #e5e7eb; font-size: 11px; color: #6b7280;">
@@ -386,7 +387,7 @@ export default function NDVIMap({ status, city, config }: NDVIMapProps) {
           {status.status === 'completed' && (
             <div className="text-right">
               <div className="text-2xl font-bold text-green-600">
-                {status.result?.vegetationPercentage?.toFixed(1) || 0}%
+                {safePercentage(status.result?.vegetationPercentage, 1)}
               </div>
               <div className="text-xs text-gray-500">Vegetation</div>
             </div>

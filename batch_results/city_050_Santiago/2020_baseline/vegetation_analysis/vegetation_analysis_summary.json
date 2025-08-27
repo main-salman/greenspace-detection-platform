@@ -1,0 +1,38 @@
+{
+  "vegetation_percentage": 14.359216696497773,
+  "high_density_percentage": 2.359027115638748,
+  "medium_density_percentage": 5.915062199249483,
+  "low_density_percentage": 6.085127381609542,
+  "ndvi_mean": 0.12724311649799347,
+  "total_pixels": 717372,
+  "vegetation_pixels": 103009,
+  "images_processed": 1,
+  "images_found": 1,
+  "ndvi_threshold": 0.3,
+  "geographic_bounds": {
+    "west": -70.695691,
+    "south": -33.482054,
+    "east": -70.621877,
+    "north": -33.423762,
+    "crs": "EPSG:4326"
+  },
+  "city_info": {
+    "name": "Santiago, Chile",
+    "center_lat": -33.452908,
+    "center_lon": -70.658784
+  },
+  "processing_config": {
+    "ndvi_threshold": 0.3,
+    "cloud_threshold": 20,
+    "highlight_alpha": 0.6,
+    "date_range": "2020-07 to 2020-07"
+  },
+  "baseline_vegetation_2020": null,
+  "percent_change_vs_2020": null,
+  "cloud_excluded_percentage": 2.7457041179461106,
+  "output_files": [
+    "vegetation_highlighted.png",
+    "ndvi_visualization.png",
+    "false_color_base.png"
+  ]
+}

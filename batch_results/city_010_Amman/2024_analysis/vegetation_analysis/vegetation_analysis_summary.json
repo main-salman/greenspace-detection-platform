@@ -1,0 +1,38 @@
+{
+  "vegetation_percentage": 4.5554265656279425,
+  "high_density_percentage": 0.21557568610961303,
+  "medium_density_percentage": 1.1150519057500052,
+  "low_density_percentage": 3.224798973768324,
+  "ndvi_mean": 0.12241381406784058,
+  "total_pixels": 656382,
+  "vegetation_pixels": 29901,
+  "images_processed": 1,
+  "images_found": 1,
+  "ndvi_threshold": 0.3,
+  "geographic_bounds": {
+    "west": 35.769038,
+    "south": 31.760648,
+    "east": 36.161799,
+    "north": 32.107951,
+    "crs": "EPSG:4326"
+  },
+  "city_info": {
+    "name": "Amman, Jordan",
+    "center_lat": 31.9342995,
+    "center_lon": 35.9654185
+  },
+  "processing_config": {
+    "ndvi_threshold": 0.3,
+    "cloud_threshold": 20,
+    "highlight_alpha": 0.6,
+    "date_range": "2024-07 to 2024-07"
+  },
+  "baseline_vegetation_2020": 1.4117160458889348,
+  "percent_change_vs_2020": 222.68717061719477,
+  "cloud_excluded_percentage": 0.0,
+  "output_files": [
+    "vegetation_highlighted.png",
+    "ndvi_visualization.png",
+    "false_color_base.png"
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "vegetation_percentage": 72.0460482482234,
+  "high_density_percentage": 45.45017455704456,
+  "medium_density_percentage": 17.280648065320143,
+  "low_density_percentage": 9.315225625858696,
+  "ndvi_mean": 0.5048020482063293,
+  "total_pixels": 700917,
+  "vegetation_pixels": 504983,
+  "images_processed": 1,
+  "images_found": 1,
+  "ndvi_threshold": 0.3,
+  "geographic_bounds": {
+    "west": 110.319128,
+    "south": -7.107032,
+    "east": 110.533361,
+    "north": -6.92064,
+    "crs": "EPSG:4326"
+  },
+  "city_info": {
+    "name": "Semarang, Indonesia",
+    "center_lat": -7.0138359999999995,
+    "center_lon": 110.4262445
+  },
+  "processing_config": {
+    "ndvi_threshold": 0.3,
+    "cloud_threshold": 20,
+    "highlight_alpha": 0.6,
+    "date_range": "2020-07 to 2020-07"
+  },
+  "baseline_vegetation_2020": null,
+  "percent_change_vs_2020": null,
+  "cloud_excluded_percentage": 10.782924808211488,
+  "output_files": [
+    "vegetation_highlighted.png",
+    "ndvi_visualization.png",
+    "false_color_base.png"
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "vegetation_percentage": 58.49851818938704,
+  "high_density_percentage": 13.669756827760546,
+  "medium_density_percentage": 24.521557073075336,
+  "low_density_percentage": 20.307204288551162,
+  "ndvi_mean": 0.3233579695224762,
+  "total_pixels": 695433,
+  "vegetation_pixels": 406818,
+  "images_processed": 1,
+  "images_found": 1,
+  "ndvi_threshold": 0.3,
+  "geographic_bounds": {
+    "west": 102.752761,
+    "south": 17.355523,
+    "east": 102.826576,
+    "north": 17.435135,
+    "crs": "EPSG:4326"
+  },
+  "city_info": {
+    "name": "Udon Thani, Thailand",
+    "center_lat": 17.395329,
+    "center_lon": 102.7896685
+  },
+  "processing_config": {
+    "ndvi_threshold": 0.3,
+    "cloud_threshold": 20,
+    "highlight_alpha": 0.6,
+    "date_range": "2024-07 to 2024-07"
+  },
+  "baseline_vegetation_2020": null,
+  "percent_change_vs_2020": null,
+  "cloud_excluded_percentage": 1.7985794371407995,
+  "output_files": [
+    "vegetation_highlighted.png",
+    "ndvi_visualization.png",
+    "false_color_base.png"
+  ]
+}

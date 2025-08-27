@@ -1,0 +1,38 @@
+{
+  "vegetation_percentage": 52.9082728007331,
+  "high_density_percentage": 27.667207542510024,
+  "medium_density_percentage": 14.58458352198996,
+  "low_density_percentage": 10.656481736233122,
+  "ndvi_mean": 0.4427949786186218,
+  "total_pixels": 461597,
+  "vegetation_pixels": 244223,
+  "images_processed": 1,
+  "images_found": 1,
+  "ndvi_threshold": 0.3,
+  "geographic_bounds": {
+    "west": -78.585205,
+    "south": -0.370786,
+    "east": -78.446503,
+    "north": -0.056305,
+    "crs": "EPSG:4326"
+  },
+  "city_info": {
+    "name": "Quito, Ecuador",
+    "center_lat": -0.2135455,
+    "center_lon": -78.515854
+  },
+  "processing_config": {
+    "ndvi_threshold": 0.3,
+    "cloud_threshold": 20,
+    "highlight_alpha": 0.6,
+    "date_range": "2020-07 to 2020-07"
+  },
+  "baseline_vegetation_2020": null,
+  "percent_change_vs_2020": null,
+  "cloud_excluded_percentage": 6.7469504680864825,
+  "output_files": [
+    "vegetation_highlighted.png",
+    "ndvi_visualization.png",
+    "false_color_base.png"
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "vegetation_percentage": 9.517281571401135,
+  "high_density_percentage": 0.9460327551838091,
+  "medium_density_percentage": 2.8109457678527674,
+  "low_density_percentage": 5.760303048364559,
+  "ndvi_mean": 0.1651124805212021,
+  "total_pixels": 301998,
+  "vegetation_pixels": 28742,
+  "images_processed": 1,
+  "images_found": 1,
+  "ndvi_threshold": 0.3,
+  "geographic_bounds": {
+    "west": 34.197909,
+    "south": 31.206767,
+    "east": 34.579555,
+    "north": 31.618143,
+    "crs": "EPSG:4326"
+  },
+  "city_info": {
+    "name": "Gaza, Palestine",
+    "center_lat": 31.412455,
+    "center_lon": 34.388732000000005
+  },
+  "processing_config": {
+    "ndvi_threshold": 0.3,
+    "cloud_threshold": 20,
+    "highlight_alpha": 0.6,
+    "date_range": "2024-07 to 2024-07"
+  },
+  "baseline_vegetation_2020": 25.130487517936857,
+  "percent_change_vs_2020": -62.12854380716575,
+  "cloud_excluded_percentage": 28.46090433596119,
+  "output_files": [
+    "vegetation_highlighted.png",
+    "ndvi_visualization.png",
+    "false_color_base.png"
+  ]
+}

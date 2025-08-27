@@ -1,0 +1,38 @@
+{
+  "vegetation_percentage": 30.472268387072372,
+  "high_density_percentage": 7.794780626996153,
+  "medium_density_percentage": 11.546308401162172,
+  "low_density_percentage": 11.131179358914045,
+  "ndvi_mean": 0.20362162590026855,
+  "total_pixels": 423001,
+  "vegetation_pixels": 128898,
+  "images_processed": 1,
+  "images_found": 1,
+  "ndvi_threshold": 0.3,
+  "geographic_bounds": {
+    "west": 139.604339,
+    "south": 35.389584,
+    "east": 139.698753,
+    "north": 35.472108,
+    "crs": "EPSG:4326"
+  },
+  "city_info": {
+    "name": "Yokohama, Japan",
+    "center_lat": 35.430846,
+    "center_lon": 139.651546
+  },
+  "processing_config": {
+    "ndvi_threshold": 0.3,
+    "cloud_threshold": 20,
+    "highlight_alpha": 0.6,
+    "date_range": "2020-07 to 2020-07"
+  },
+  "baseline_vegetation_2020": null,
+  "percent_change_vs_2020": null,
+  "cloud_excluded_percentage": 43.47702339751727,
+  "output_files": [
+    "vegetation_highlighted.png",
+    "ndvi_visualization.png",
+    "false_color_base.png"
+  ]
+}

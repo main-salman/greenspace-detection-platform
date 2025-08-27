@@ -1,0 +1,38 @@
+{
+  "vegetation_percentage": 29.785420759426394,
+  "high_density_percentage": 18.28792149493684,
+  "medium_density_percentage": 7.518530117966385,
+  "low_density_percentage": 3.978969146523171,
+  "ndvi_mean": 0.5755828619003296,
+  "total_pixels": 526845,
+  "vegetation_pixels": 156923,
+  "images_processed": 1,
+  "images_found": 1,
+  "ndvi_threshold": 0.3,
+  "geographic_bounds": {
+    "west": -2.324467,
+    "south": 53.324303,
+    "east": -2.099247,
+    "north": 53.554986,
+    "crs": "EPSG:4326"
+  },
+  "city_info": {
+    "name": "Manchester, United Kingdom",
+    "center_lat": 53.4396445,
+    "center_lon": -2.211857
+  },
+  "processing_config": {
+    "ndvi_threshold": 0.3,
+    "cloud_threshold": 20,
+    "highlight_alpha": 0.6,
+    "date_range": "2024-07 to 2024-07"
+  },
+  "baseline_vegetation_2020": null,
+  "percent_change_vs_2020": null,
+  "cloud_excluded_percentage": 63.90190663288063,
+  "output_files": [
+    "vegetation_highlighted.png",
+    "ndvi_visualization.png",
+    "false_color_base.png"
+  ]
+}

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Play, Pause, RotateCcw, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { safeToFixed, safePercentage, safeDecimal } from '../lib/utils';
 
 interface AlignmentTestResult {
   iteration: number;
@@ -76,7 +77,7 @@ const AlignmentTester: React.FC = () => {
               }
               
               // Load screenshots if test completed
-              if (data.test.status === 'completed' && data.test.results) {
+              if (data.test.status === 'completed' && Array.isArray(data.test.results)) {
                 loadScreenshots(data.test.results.length);
               }
             }
@@ -153,7 +154,9 @@ const AlignmentTester: React.FC = () => {
     
     switch (testStatus.status) {
       case 'completed':
-        const finalResult = testStatus.results?.[testStatus.results.length - 1];
+        const finalResult = (Array.isArray(testStatus.results) && testStatus.results.length > 0)
+          ? testStatus.results[testStatus.results.length - 1]
+          : undefined;
         return finalResult?.is_acceptable ? 
           <CheckCircle className="w-6 h-6 text-green-500" /> :
           <XCircle className="w-6 h-6 text-red-500" />;
@@ -283,7 +286,7 @@ const AlignmentTester: React.FC = () => {
             <div className="mb-3">
               <div className="flex justify-between text-sm text-gray-600 mb-1">
                 <span>{testStatus.progress.message}</span>
-                <span>{getProgressPercent().toFixed(1)}%</span>
+                <span>{safePercentage(getProgressPercent(), 1)}</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
                 <div
@@ -305,7 +308,7 @@ const AlignmentTester: React.FC = () => {
                 <span className="font-medium">Final Misalignment:</span>
                 <br />
                 <span className={getFinalMisalignment()! <= config.tolerance ? 'text-green-600' : 'text-red-600'}>
-                  {getFinalMisalignment()?.toFixed(3)}m
+                  {safeDecimal(getFinalMisalignment(), 3)}m
                 </span>
               </div>
               <div>
@@ -352,10 +355,10 @@ const AlignmentTester: React.FC = () => {
                     <td className="border border-gray-300 px-4 py-2">{result.iteration + 1}</td>
                     <td className="border border-gray-300 px-4 py-2">
                       <span className={result.misalignment_meters <= config.tolerance ? 'text-green-600' : 'text-red-600'}>
-                        {result.misalignment_meters.toFixed(3)}
+                        {safeDecimal(result.misalignment_meters, 3)}
                       </span>
                     </td>
-                    <td className="border border-gray-300 px-4 py-2">{result.alignment_score.toFixed(1)}</td>
+                                          <td className="border border-gray-300 px-4 py-2">{safeDecimal(result.alignment_score, 1)}</td>
                     <td className="border border-gray-300 px-4 py-2">
                       {result.is_acceptable ? (
                         <span className="text-green-600">✅ Acceptable</span>

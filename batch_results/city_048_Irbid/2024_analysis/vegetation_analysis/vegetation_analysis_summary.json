@@ -1,0 +1,38 @@
+{
+  "vegetation_percentage": 13.189450377660458,
+  "high_density_percentage": 0.10755692361358964,
+  "medium_density_percentage": 2.896285087216391,
+  "low_density_percentage": 10.185608366830479,
+  "ndvi_mean": 0.16642796993255615,
+  "total_pixels": 619207,
+  "vegetation_pixels": 81670,
+  "images_processed": 1,
+  "images_found": 1,
+  "ndvi_threshold": 0.3,
+  "geographic_bounds": {
+    "west": 35.787792,
+    "south": 32.440816,
+    "east": 35.934734,
+    "north": 32.604085,
+    "crs": "EPSG:4326"
+  },
+  "city_info": {
+    "name": "Irbid, Jordan",
+    "center_lat": 32.5224505,
+    "center_lon": 35.861263
+  },
+  "processing_config": {
+    "ndvi_threshold": 0.3,
+    "cloud_threshold": 20,
+    "highlight_alpha": 0.6,
+    "date_range": "2024-07 to 2024-07"
+  },
+  "baseline_vegetation_2020": 12.655331748239199,
+  "percent_change_vs_2020": 4.220502789234064,
+  "cloud_excluded_percentage": 0.0001614966214906784,
+  "output_files": [
+    "vegetation_highlighted.png",
+    "ndvi_visualization.png",
+    "false_color_base.png"
+  ]
+}

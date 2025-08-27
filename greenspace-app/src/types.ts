@@ -110,8 +110,10 @@ export interface ProcessingStatus {
   status: 'pending' | 'downloading' | 'preprocessing' | 'processing' | 'completed' | 'failed';
   progress: number;
   message: string;
-  startTime: Date;
-  endTime?: Date;
+  // Store as string | number | Date because when persisted and reloaded
+  // via file-backed status in the packaged app, these may be ISO strings.
+  startTime: Date | string | number;
+  endTime?: Date | string | number;
   result?: {
     downloadedImages: number;
     processedComposites: number;

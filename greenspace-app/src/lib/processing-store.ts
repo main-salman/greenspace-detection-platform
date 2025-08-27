@@ -1,4 +1,5 @@
 import { ProcessingStatus } from '@/types';
+import { safeParseDate } from './utils';
 
 // Global processing jobs storage
 // Using a module-level Map to persist across hot reloads
@@ -15,7 +16,16 @@ export function setProcessingJob(id: string, status: ProcessingStatus): void {
 export function updateProcessingJob(id: string, updates: Partial<ProcessingStatus>): void {
   const currentStatus = globalProcessingJobs.get(id);
   if (currentStatus) {
-    const newStatus = { ...currentStatus, ...updates };
+    const newStatus = { ...currentStatus, ...updates } as ProcessingStatus;
+    // Normalize date fields defensively when updates arrive
+    if (updates.startTime !== undefined) {
+      const d = safeParseDate(updates.startTime as any);
+      if (d) newStatus.startTime = d; // keep invalid as-is to avoid losing info
+    }
+    if (updates.endTime !== undefined) {
+      const d = safeParseDate(updates.endTime as any);
+      if (d) newStatus.endTime = d;
+    }
     globalProcessingJobs.set(id, newStatus);
     console.log(`Updated status for ${id}:`, updates);
   } else {

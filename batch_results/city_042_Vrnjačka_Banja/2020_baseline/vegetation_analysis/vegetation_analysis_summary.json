@@ -1,0 +1,38 @@
+{
+  "vegetation_percentage": 97.67483592395885,
+  "high_density_percentage": 85.93564379849599,
+  "medium_density_percentage": 9.774591931270292,
+  "low_density_percentage": 1.9646001941925846,
+  "ndvi_mean": 0.7774804830551147,
+  "total_pixels": 718874,
+  "vegetation_pixels": 702159,
+  "images_processed": 1,
+  "images_found": 1,
+  "ndvi_threshold": 0.3,
+  "geographic_bounds": {
+    "west": 20.840292,
+    "south": 43.57482,
+    "east": 20.941916,
+    "north": 43.678699,
+    "crs": "EPSG:4326"
+  },
+  "city_info": {
+    "name": "Vrnja\u010dka Banja, Serbia",
+    "center_lat": 43.626759500000006,
+    "center_lon": 20.891104
+  },
+  "processing_config": {
+    "ndvi_threshold": 0.3,
+    "cloud_threshold": 20,
+    "highlight_alpha": 0.6,
+    "date_range": "2020-07 to 2020-07"
+  },
+  "baseline_vegetation_2020": null,
+  "percent_change_vs_2020": null,
+  "cloud_excluded_percentage": 0.30606825030752444,
+  "output_files": [
+    "vegetation_highlighted.png",
+    "ndvi_visualization.png",
+    "false_color_base.png"
+  ]
+}

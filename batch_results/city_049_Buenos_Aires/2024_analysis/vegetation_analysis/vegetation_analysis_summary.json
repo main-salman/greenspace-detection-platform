@@ -1,0 +1,38 @@
+{
+  "vegetation_percentage": 26.181896800230614,
+  "high_density_percentage": 5.918892732455719,
+  "medium_density_percentage": 10.482928157330003,
+  "low_density_percentage": 9.780075910444893,
+  "ndvi_mean": 0.19208091497421265,
+  "total_pixels": 499536,
+  "vegetation_pixels": 130788,
+  "images_processed": 1,
+  "images_found": 1,
+  "ndvi_threshold": 0.3,
+  "geographic_bounds": {
+    "west": -58.591805,
+    "south": -34.726941,
+    "east": -58.324013,
+    "north": -34.514927,
+    "crs": "EPSG:4326"
+  },
+  "city_info": {
+    "name": "Buenos Aires, Argentina",
+    "center_lat": -34.620934,
+    "center_lon": -58.457909
+  },
+  "processing_config": {
+    "ndvi_threshold": 0.3,
+    "cloud_threshold": 20,
+    "highlight_alpha": 0.6,
+    "date_range": "2024-07 to 2024-07"
+  },
+  "baseline_vegetation_2020": 27.344542823266117,
+  "percent_change_vs_2020": -4.251839317811761,
+  "cloud_excluded_percentage": 13.276957290894476,
+  "output_files": [
+    "vegetation_highlighted.png",
+    "ndvi_visualization.png",
+    "false_color_base.png"
+  ]
+}

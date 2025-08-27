@@ -1,0 +1,38 @@
+{
+  "vegetation_percentage": 96.93420604133634,
+  "high_density_percentage": 80.76799408258711,
+  "medium_density_percentage": 12.248961899754498,
+  "low_density_percentage": 3.9172500589947297,
+  "ndvi_mean": 0.7490398287773132,
+  "total_pixels": 724641,
+  "vegetation_pixels": 702425,
+  "images_processed": 1,
+  "images_found": 1,
+  "ndvi_threshold": 0.3,
+  "geographic_bounds": {
+    "west": 21.840391,
+    "south": 43.624546,
+    "east": 21.899786,
+    "north": 43.660571,
+    "crs": "EPSG:4326"
+  },
+  "city_info": {
+    "name": "Sokobanja, Serbia",
+    "center_lat": 43.6425585,
+    "center_lon": 21.8700885
+  },
+  "processing_config": {
+    "ndvi_threshold": 0.3,
+    "cloud_threshold": 20,
+    "highlight_alpha": 0.6,
+    "date_range": "2020-07 to 2020-07"
+  },
+  "baseline_vegetation_2020": null,
+  "percent_change_vs_2020": null,
+  "cloud_excluded_percentage": 0.0,
+  "output_files": [
+    "vegetation_highlighted.png",
+    "ndvi_visualization.png",
+    "false_color_base.png"
+  ]
+}
