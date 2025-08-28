@@ -155,7 +155,7 @@ resource "aws_iam_instance_profile" "ec2_greenspace_profile" {
 
 # EC2 Instance for Greenspace App
 resource "aws_instance" "greenspace_manager" {
-  ami                    = "ami-0e95a5e2743ec9ec9" # Latest Amazon Linux 2 AMI for us-east-1
+  ami                    = "ami-0c02fb55956c7d316" # Latest Amazon Linux 2023 AMI for us-east-1
   instance_type          = "t3.medium"
 
   root_block_device {

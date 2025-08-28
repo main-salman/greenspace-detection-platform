@@ -4,26 +4,19 @@ set -x
 echo "[user_data] Greenspace app setup started at $(date)"
 
 # System dependencies
-sudo yum update -y
-sudo yum install -y git nginx unzip curl
+sudo dnf update -y
+sudo dnf install -y git nginx unzip curl nodejs npm python3 python3-pip python3-devel gcc gcc-c++
 
-# Install Node.js via Amazon Linux Extras
-sudo amazon-linux-extras install -y nodejs14
-sudo yum install -y npm
-
-# Install Python 3.8 (required for the application)
-sudo amazon-linux-extras install python3.8 -y
-sudo yum install -y python3.8-pip python3.8-devel
-
-# Create symlinks for easier usage
-sudo ln -sf /usr/bin/python3.8 /usr/local/bin/python3
-sudo ln -sf /usr/bin/pip3.8 /usr/local/bin/pip3
+# Verify installations
+node --version
+npm --version
+python3 --version
 
 # Install additional system packages for satellite processing
-sudo yum install -y gcc gcc-c++ gdal gdal-devel proj proj-devel geos geos-devel
+sudo dnf install -y gdal gdal-devel proj proj-devel geos geos-devel
 
 # AWS CLI v2
-sudo yum remove -y awscli || true
+sudo dnf remove -y awscli || true
 cd /tmp
 curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
 unzip -o awscliv2.zip
@@ -83,11 +76,11 @@ APP_DOMAIN="${APP_DOMAIN}"
 LETSENCRYPT_EMAIL="${LETSENCRYPT_EMAIL}"
 
 echo "[user_data] Installing and configuring Nginx and Certbot..."
-sudo amazon-linux-extras install -y nginx1 epel
-sudo yum install -y nginx
+sudo dnf install -y epel-release
+sudo dnf install -y nginx
 sudo systemctl enable nginx
 sudo systemctl start nginx
-sudo yum install -y certbot
+sudo dnf install -y certbot
 
 # Wait for network connectivity before proceeding
 echo "[user_data] Checking network connectivity..."
