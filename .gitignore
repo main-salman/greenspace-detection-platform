@@ -6,6 +6,8 @@ yarn-error.log*
 
 .terraform/
 
+node_modules/
+
 # Python
 __pycache__/
 *.py[cod]
