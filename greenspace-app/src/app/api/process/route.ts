@@ -194,6 +194,43 @@ async function processInBackground(processingId: string, config: ProcessingConfi
         const medPct = avg(compMonthly.map(x=>x.medPct));
         const lowPct = avg(compMonthly.map(x=>x.lowPct));
         const cloudExcludedPct = avg(compMonthly.map(x=>x.cloud));
+        
+        // Generate change visualization for this city
+        let changeVisualization = null;
+        try {
+          console.log(`🔄 Generating change visualization for ${city.city}...`);
+          const cityOutputDir = path.join(outputDir, city.city.replace(/\s+/g, '_'));
+          const changeConfigPath = path.join(cityOutputDir, 'change_config.json');
+          await fs.mkdir(cityOutputDir, { recursive: true });
+          
+          await fs.writeFile(changeConfigPath, JSON.stringify({
+            city,
+            baselineYear,
+            compareYear,
+            baselineDir: path.join(cityOutputDir, 'baseline'),
+            compareDir: path.join(cityOutputDir, 'compare'),
+            outputDir: cityOutputDir,
+            generateChangeVisualization: true
+          }, null, 2));
+          
+          // Run change visualization script
+          await runPythonScript('generate_change_visualization.py', changeConfigPath, processingId);
+          
+          // Check if change visualization was created
+          const changeImagePath = path.join(cityOutputDir, 'vegetation_change.png');
+          const changeStatsPath = path.join(cityOutputDir, 'change_stats.json');
+          
+          if (await fs.access(changeImagePath).then(() => true).catch(() => false)) {
+            if (await fs.access(changeStatsPath).then(() => true).catch(() => false)) {
+              const changeStats = JSON.parse(await fs.readFile(changeStatsPath, 'utf-8'));
+              changeVisualization = changeStats;
+              console.log(`✅ Change visualization generated for ${city.city}`);
+            }
+          }
+        } catch (error) {
+          console.log(`⚠️ Failed to generate change visualization for ${city.city}:`, error);
+        }
+        
         batchSummaries.push({
           city,
           baselineYear,
@@ -211,7 +248,8 @@ async function processInBackground(processingId: string, config: ProcessingConfi
           medPct,
           lowPct,
           cloudExcludedPct,
-          vegetationPct: compareVegetation
+          vegetationPct: compareVegetation,
+          changeVisualization
         });
         // Persist intermediate batch status
         updateProcessingJob(processingId, {
@@ -365,6 +403,43 @@ async function processInBackground(processingId: string, config: ProcessingConfi
           : 0
       };
 
+      // Generate vegetation change visualization
+      let changeVisualization = null;
+      let outputFiles: string[] = [];
+      
+      try {
+        console.log('🔄 Generating vegetation change visualization...');
+        const changeConfigPath = path.join(outputDir, 'change_config.json');
+        await fs.writeFile(changeConfigPath, JSON.stringify({
+          city: config.city,
+          baselineYear,
+          compareYear,
+          baselineDir: path.join(outputDir, 'baseline'),
+          compareDir: path.join(outputDir, 'compare'),
+          outputDir,
+          generateChangeVisualization: true
+        }, null, 2));
+        
+        // Run change visualization script
+        await runPythonScript('generate_change_visualization.py', changeConfigPath, processingId);
+        
+        // Check if change visualization was created
+        const changeImagePath = path.join(outputDir, 'vegetation_change.png');
+        const changeStatsPath = path.join(outputDir, 'change_stats.json');
+        
+        if (await fs.access(changeImagePath).then(() => true).catch(() => false)) {
+          outputFiles.push('vegetation_change.png');
+          
+          if (await fs.access(changeStatsPath).then(() => true).catch(() => false)) {
+            const changeStats = JSON.parse(await fs.readFile(changeStatsPath, 'utf-8'));
+            changeVisualization = changeStats;
+            console.log('✅ Change visualization generated successfully');
+          }
+        }
+      } catch (error) {
+        console.log('⚠️ Failed to generate change visualization:', error);
+      }
+
       updateProcessingJob(processingId, {
         status: 'completed',
         progress: 100,
@@ -377,9 +452,10 @@ async function processInBackground(processingId: string, config: ProcessingConfi
           highDensityPercentage: 0,
           mediumDensityPercentage: 0,
           lowDensityPercentage: 0,
-          outputFiles: [],
+          outputFiles,
           summary: undefined,
           annualComparison,
+          changeVisualization,
           previews: [...baselineAgg.previews, ...compareAgg.previews]
         }
       });

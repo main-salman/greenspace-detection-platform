@@ -2,12 +2,29 @@
 
 import { CityAnnualSummary } from '@/types';
 import { safeToFixed, safePercentage } from '../lib/utils';
+import dynamic from 'next/dynamic';
+
+// Dynamic import to prevent SSR issues with Leaflet
+const ChangeVisualizationMap = dynamic(() => import('./ChangeVisualizationMap'), {
+  ssr: false,
+  loading: () => (
+    <div className="bg-white rounded-lg shadow-md p-6">
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading change visualization map...</p>
+        </div>
+      </div>
+    </div>
+  )
+});
 
 interface SummaryPanelProps {
   summaries: CityAnnualSummary[];
+  processingId?: string;
 }
 
-export default function SummaryPanel({ summaries }: SummaryPanelProps) {
+export default function SummaryPanel({ summaries, processingId }: SummaryPanelProps) {
   if (!Array.isArray(summaries) || (summaries?.length || 0) === 0) return null;
 
   // Filter for summaries with valid data to prevent toFixed errors
@@ -121,7 +138,7 @@ export default function SummaryPanel({ summaries }: SummaryPanelProps) {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
+    <div className="bg-white rounded-lg shadow-md p-6 max-w-none w-full">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-gray-800">📈 Multi‑City Annual Summary</h3>
         <div className="flex items-center gap-2">
@@ -161,7 +178,7 @@ export default function SummaryPanel({ summaries }: SummaryPanelProps) {
         </table>
       </div>
 
-      <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="mt-6 grid grid-cols-1 gap-8">
         {validSummaries.map((s, idx) => (
           <div key={idx} className="border border-gray-200 rounded-lg p-4">
             <div className="flex items-center justify-between mb-2">
@@ -171,6 +188,43 @@ export default function SummaryPanel({ summaries }: SummaryPanelProps) {
               </div>
             </div>
             <Chart s={s} />
+            
+            {/* Change Visualization */}
+            {(s as any).changeVisualization && (
+              <div className="mt-4 border-t pt-4">
+                <h4 className="text-sm font-semibold text-gray-700 mb-2">🔄 Vegetation Change Analysis</h4>
+                <div className="grid grid-cols-3 gap-2 text-xs mb-3">
+                  <div className="text-center">
+                    <div className="flex items-center justify-center mb-1">
+                      <div className="w-3 h-3 bg-green-500 rounded mr-1"></div>
+                      <span>Gain</span>
+                    </div>
+                    <div className="font-semibold">{safeToFixed((s as any).changeVisualization.gainPercentage, 1)}%</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="flex items-center justify-center mb-1">
+                      <div className="w-3 h-3 bg-red-500 rounded mr-1"></div>
+                      <span>Loss</span>
+                    </div>
+                    <div className="font-semibold">{safeToFixed((s as any).changeVisualization.lossPercentage, 1)}%</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="flex items-center justify-center mb-1">
+                      <div className="w-3 h-3 bg-purple-500 rounded mr-1"></div>
+                      <span>Stable</span>
+                    </div>
+                    <div className="font-semibold">{safeToFixed((s as any).changeVisualization.stablePercentage, 1)}%</div>
+                  </div>
+                </div>
+                
+                {/* Interactive Change Visualization Map */}
+                <ChangeVisualizationMap 
+                  city={s.city}
+                  processingId={processingId || ''}
+                  changeVisualization={(s as any).changeVisualization}
+                />
+              </div>
+            )}
           </div>
         ))}
       </div>

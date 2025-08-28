@@ -7,8 +7,8 @@ import type React from 'react';
 const Map = dynamic(() => import('react-leaflet').then(m => m.MapContainer), { ssr: false });
 const TileLayer = dynamic(() => import('react-leaflet').then(m => m.TileLayer), { ssr: false });
 const Polygon = dynamic(() => import('react-leaflet').then(m => m.Polygon), { ssr: false });
-const FeatureGroup: any = dynamic<any>(
-  () => import('react-leaflet').then(m => (m as any).FeatureGroup),
+const FeatureGroup = dynamic(
+  () => import('react-leaflet').then(m => m.FeatureGroup),
   { ssr: false }
 );
 const EditControl: any = dynamic<any>(
@@ -57,7 +57,14 @@ export default function AddCityPage() {
       const params = new URLSearchParams({ city: form.city, country: form.country });
       if (form.state_province) params.set('state', form.state_province);
       const resp = await fetch(`/api/osm/boundary?${params.toString()}`);
-      if (!resp.ok) throw new Error('Boundary not found');
+      if (!resp.ok) {
+        const errorData = await resp.json();
+        if (errorData.placeholder) {
+          throw new Error(errorData.message || errorData.error);
+        } else {
+          throw new Error('Boundary not found');
+        }
+      }
       const data = await resp.json();
       updateField('polygon_geojson', data.polygon_geojson);
     } catch (e: any) {
@@ -130,7 +137,7 @@ export default function AddCityPage() {
             <div style={{ height: 500 }}>
               <Map center={center} zoom={4} style={{ height: '100%', width: '100%' }}>
                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap contributors" />
-                <FeatureGroup ref={fgRef as any}>
+                <FeatureGroup ref={fgRef}>
                   <EditControl
                     position="topleft"
                     draw={{

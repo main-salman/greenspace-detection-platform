@@ -114,6 +114,61 @@
 
 **Status**: 🎉 **FULLY FUNCTIONAL** - Web app now successfully processes real satellite data and generates accurate vegetation analysis with interactive visualizations.
 
+## 2025-01-27: Vegetation Change Visualization Feature
+
+### 🎨 **NEW FEATURE: Visual Vegetation Change Analysis**
+
+**Feature**: Added composite image generation that visually shows areas of vegetation gain/loss between comparison years.
+
+#### ✅ **Implementation Details:**
+
+1. **Change Visualization Script** (`generate_change_visualization.py`):
+   - Loads best NDVI data from baseline and compare years
+   - Creates color-coded composite image showing vegetation changes
+   - **Green areas**: New vegetation (gain)
+   - **Red areas**: Lost vegetation (loss)
+   - **Light green**: Stable vegetation (unchanged)
+   - **Gray**: Consistently no vegetation
+   - **Black**: Outside city boundaries
+
+2. **API Integration**:
+   - Integrated into annual comparison workflow (`/api/process`)
+   - Automatically generates change visualization after baseline/compare processing
+   - Saves `vegetation_change.png` and `change_stats.json` files
+   - Includes change statistics in API response
+
+3. **UI Enhancement** (ResultsPanel.tsx):
+   - Added dedicated "Vegetation Change Analysis" section
+   - Displays gain/loss/stable percentages with color-coded indicators
+   - Shows change visualization image when available
+   - Integrated with existing annual comparison display
+
+4. **Statistics Provided**:
+   - Vegetation gain percentage and pixel count
+   - Vegetation loss percentage and pixel count  
+   - Stable vegetation percentage and pixel count
+   - Total city pixels for context
+
+#### ✅ **Usage:**
+- Automatically generated during annual comparison mode
+- Provides immediate visual understanding of vegetation changes
+- Valuable for urban planning and environmental monitoring
+- Complements numerical statistics with intuitive visual representation
+
+**Status**: ✅ **IMPLEMENTED** - Change visualization feature fully integrated and functional.
+
+#### 🔧 **Bug Fixes Applied:**
+- **Fixed Batch Mode Integration**: Added change visualization generation to multi-city batch processing workflow
+- **Fixed Data Persistence**: Modified satellite processor to save NDVI numpy arrays and city masks required for change visualization
+- **Enhanced UI Display**: Updated SummaryPanel to show change visualization images and statistics for each city in batch results
+- **Improved Error Handling**: Added proper fallback for missing change visualization data
+
+#### 📊 **Current Status:**
+- Single-city annual comparison: ✅ Working with change visualization
+- Multi-city batch processing: ✅ Updated to include change visualization
+- UI display: ✅ Shows change images and statistics in batch results
+- Data persistence: ✅ Saves required NDVI and mask data for visualization generation
+
 ## 2025-08-27: Year-comparison CSV correctness fixes and diagnostics
 
 - Changed `batch_process_all_cities.py` to compute vegetation change as absolute difference (2024 − 2020) in percentage points, not relative percent.
@@ -231,3 +286,72 @@ curl /api/status/bbd6175e-... → {"progress":2,"status":"downloading"}
 - Continued NDVI-only classification into density ranges; removed references to ML thresholds.
 - Added optional percent change vs 2020 baseline: computes same-month 2020 vegetation% and reports ((current-2020)/2020)*100 when the selected year ≠ 2020.
 - Updated `greenspace-app/README.md` to document the above methodology.
+
+## 2025-01-29: AWS Deployment Infrastructure Setup
+
+### 🚀 **AWS Deployment Configuration Complete**
+
+**Objective**: Deploy the Greenspace vegetation analysis application on AWS using Terraform infrastructure-as-code, following the pattern from the mobility-data-lifecycle-manager reference project.
+
+#### ✅ **Infrastructure Components Created:**
+
+1. **Terraform Configuration** (`main.tf`):
+   - EC2 t3.medium instance with 50GB EBS storage on Amazon Linux 2
+   - Security groups allowing HTTP (80), HTTPS (443), SSH (22), and app port (8000)
+   - IAM roles and policies for basic CloudWatch logging (no S3 permissions needed)
+   - Route53 DNS record for `greenspace.qolimpact.click`
+   - Minimal permissions approach (no S3, SNS, or monitoring services)
+
+2. **EC2 Initialization Script** (`user_data.sh`):
+   - Installs Python 3.8, Node.js, npm, and required system packages
+   - Installs geospatial libraries (GDAL, PROJ, GEOS) for satellite processing
+   - Clones greenspace-mei repository from GitHub during startup
+   - Sets up Python virtual environment and installs FastAPI dependencies
+   - Builds and exports Next.js application for static serving
+   - Configures Nginx reverse proxy with SSL/TLS via Let's Encrypt
+   - Creates systemd service for automatic app startup and management
+
+3. **Deployment Scripts**:
+   - `deploy.sh`: Complete deployment automation with AWS credential handling
+   - `update_ec2.sh`: Application code updates without infrastructure changes
+   - `troubleshoot.sh`: Comprehensive diagnostic and monitoring script
+
+4. **SSL/HTTPS Configuration**:
+   - Automatic Let's Encrypt certificate generation for `greenspace.qolimpact.click`
+   - Nginx configuration with HTTPS redirect and proper proxy headers
+   - Auto-renewal cron job for certificate maintenance
+
+#### ✅ **Architecture Design:**
+- **Application**: FastAPI backend serving static Next.js build on port 8000
+- **Web Server**: Nginx reverse proxy handling SSL termination and static files
+- **Domain**: `greenspace.qolimpact.click` with Route53 DNS management
+- **Security**: Minimal IAM permissions, systemd service isolation, HTTPS-only
+- **Deployment**: Git-based code deployment during EC2 initialization
+- **Monitoring**: Basic systemd service management and log collection
+
+#### ✅ **Key Features:**
+- **No External Dependencies**: Self-contained deployment without S3, RDS, or other AWS services
+- **File-Based Storage**: Uses local `cities.json` file for city data management
+- **Public Access**: Fully accessible web application without authentication requirements
+- **Cost Effective**: Minimal AWS resource usage (~$35-40/month estimated)
+- **Easy Updates**: Simple script-based application updates via `update_ec2.sh`
+
+#### ✅ **Deployment Process:**
+1. Configure `terraform.tfvars` with Route53 zone ID
+2. Run `./deploy.sh` for complete infrastructure deployment
+3. Wait 5-10 minutes for EC2 initialization and SSL certificate generation
+4. Access application at `https://greenspace.qolimpact.click`
+
+#### ✅ **Management Commands:**
+- **Deploy**: `./deploy.sh` (initial deployment)
+- **Update**: `./update_ec2.sh` (code updates)
+- **Debug**: `./troubleshoot.sh` (diagnostics)
+- **SSH**: `ssh -i salman-dev.pem ec2-user@<ip>`
+
+#### ✅ **Validation Results:**
+- Terraform configuration validated successfully
+- All template syntax issues resolved
+- Infrastructure plan shows 6 resources to be created
+- Scripts are executable and ready for deployment
+
+**Status**: 🎯 **READY FOR DEPLOYMENT** - Complete AWS infrastructure configuration created and validated. Run `./deploy.sh` to deploy the Greenspace application to production.

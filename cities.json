@@ -50,8 +50,8 @@
   {
     "city_id": "59b2fa95-7b31-40d7-bf99-bd422a510321",
     "country": "Mexico",
-    "state_province": "Quer\u00e9taro",
-    "city": "Quer\u00e9taro",
+    "state_province": "Querétaro",
+    "city": "Querétaro",
     "latitude": "20.561087056816795",
     "longitude": "-100.35663664340974",
     "notification_email": "",
@@ -98,7 +98,7 @@
   {
     "city_id": "95bc2646-3179-4fc2-9b2f-3a1048265be0",
     "country": "Serbia",
-    "state_province": "Ni\u0161ava",
+    "state_province": "Nišava",
     "city": "Nis",
     "latitude": "43.35112349727735",
     "longitude": "21.86557710170746",
@@ -626,7 +626,7 @@
   {
     "city_id": "f941ea0a-a1ee-42fb-82d1-2133027b4b74",
     "country": "Serbia",
-    "state_province": "\u0160umadija",
+    "state_province": "Šumadija",
     "city": "Kragujevac",
     "latitude": "43.99822500182626",
     "longitude": "20.95851838588715",
@@ -679,7 +679,7 @@
     "city_id": "c144ab78-f9dc-41f1-8d7a-1d1014d16937",
     "country": "Turkey",
     "state_province": "Bursa",
-    "city": "Nil\u00fcfer",
+    "city": "Nilüfer",
     "latitude": "40.197470201087604",
     "longitude": "29.00428712368012",
     "notification_email": "",
@@ -774,7 +774,7 @@
   {
     "city_id": "4712f231-db97-40f7-838a-659c8de41c24",
     "country": "Colombia",
-    "state_province": "Bol\u00edvar",
+    "state_province": "Bolívar",
     "city": "Cartagena",
     "latitude": "10.311478193113038",
     "longitude": "-75.63255429267885",
@@ -814,7 +814,7 @@
   {
     "city_id": "314b8510-44cd-46f0-aafe-496f82e87dd7",
     "country": "Ecuador",
-    "state_province": "Manab\u00ed",
+    "state_province": "Manabí",
     "city": "Manta",
     "latitude": "-1.037529027905092",
     "longitude": "-81.03027462959291",
@@ -902,7 +902,7 @@
   {
     "city_id": "8e94c6ab-d445-40db-9088-0aca5235aa20",
     "country": "Ecuador",
-    "state_province": "Manab\u00ed",
+    "state_province": "Manabí",
     "city": "Portoviejo",
     "latitude": "-1.1137332430868399",
     "longitude": "-80.31616330146791",
@@ -1294,7 +1294,7 @@
   {
     "city_id": "7c0bbc97-4e9f-424d-aa53-7648665b26f6",
     "country": "Chile",
-    "state_province": "Tarapac\u00e1",
+    "state_province": "Tarapacá",
     "city": "Iquique",
     "latitude": "-20.06649288553961",
     "longitude": "-70.08697986602785",
@@ -1466,7 +1466,7 @@
   {
     "city_id": "c7469d87-1438-4ed1-8de3-5fd6dc3cf84a",
     "country": "Turkey",
-    "state_province": "\u0130stanbul",
+    "state_province": "İstanbul",
     "city": "Istanbul",
     "latitude": "40.9912902197443",
     "longitude": "28.9845085144043",
@@ -1738,7 +1738,7 @@
   {
     "city_id": "a53d0d50-37e5-408e-9fcf-e07cb5dd412a",
     "country": "Serbia",
-    "state_province": "Zaje\u010dar",
+    "state_province": "Zaječar",
     "city": "Sokobanja",
     "latitude": "43.63398879862484",
     "longitude": "21.849317550659183",
@@ -1786,7 +1786,7 @@
   {
     "city_id": "e37f8067-d667-40ea-908e-bec4ff8ce0d8",
     "country": "Turkey",
-    "state_province": "\u0130stanbul",
+    "state_province": "İstanbul",
     "city": "Sultanbeyli",
     "latitude": "40.97101471469436",
     "longitude": "29.21599388122559",
@@ -2146,7 +2146,7 @@
   {
     "city_id": "38ec97ac-107d-4692-a966-0dcf3266b584",
     "country": "Serbia",
-    "state_province": "P\u010dinja",
+    "state_province": "Pčinja",
     "city": "Vranje",
     "latitude": "42.52490074602466",
     "longitude": "21.84142112731934",
@@ -2198,8 +2198,8 @@
   {
     "city_id": "faf22e1d-f904-4b1d-b325-35f054c4dafe",
     "country": "Serbia",
-    "state_province": "Ra\u0161ka",
-    "city": "Vrnja\u010dka Banja",
+    "state_province": "Raška",
+    "city": "Vrnjačka Banja",
     "latitude": "43.624794180575975",
     "longitude": "20.84441184997559",
     "notification_email": "",
@@ -2466,7 +2466,7 @@
   {
     "city_id": "de365749-2a78-4d35-a37a-7edc4aa45d50",
     "country": "Turkey",
-    "state_province": "\u0130stanbul",
+    "state_province": "İstanbul",
     "city": "Esenler",
     "latitude": "41.02954070064516",
     "longitude": "28.874731063842777",
@@ -2657,6 +2657,42 @@
             [
               -70.695691,
               -33.440666
+            ]
+          ]
+        ]
+      }
+    }
+  },
+  {
+    "city_id": "2869982e-fc8e-4608-872c-a2b696c91c76",
+    "country": "Turkey",
+    "state_province": "Bursa",
+    "city": "Nilufer-test",
+    "latitude": "",
+    "longitude": "",
+    "notification_email": "",
+    "polygon_geojson": {
+      "type": "Feature",
+      "properties": {},
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              28.905191868795253,
+              40.27533480732468
+            ],
+            [
+              28.986577015992715,
+              40.27533480732468
+            ],
+            [
+              28.987779694414847,
+              40.21230962794301
+            ],
+            [
+              28.905192130991118,
+              40.213227255022346
             ]
           ]
         ]

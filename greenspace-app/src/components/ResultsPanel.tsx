@@ -210,6 +210,76 @@ export default function ResultsPanel({ status, selectedCity }: ResultsPanelProps
             </div>
           </div>
 
+          {/* Vegetation Change Analysis (if available) */}
+          {annual && (
+            <div className="bg-gradient-to-r from-green-50 to-red-50 border border-gray-200 rounded-lg p-4 mb-6">
+              <h3 className="font-semibold text-gray-800 mb-3">🔄 Vegetation Change Analysis ({annual.baselineYear} → {annual.compareYear})</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div className="text-center">
+                  <div className="flex items-center justify-center mb-2">
+                    <div className="w-4 h-4 bg-green-500 rounded mr-2"></div>
+                    <span className="font-medium">Vegetation Gain</span>
+                  </div>
+                  <div className="text-2xl font-bold text-green-600">
+                    {safePercentage((result as any)?.changeVisualization?.gainPercentage || 0, 1)}
+                  </div>
+                  <div className="text-xs text-gray-600">New vegetation areas</div>
+                </div>
+                
+                <div className="text-center">
+                  <div className="flex items-center justify-center mb-2">
+                    <div className="w-4 h-4 bg-red-500 rounded mr-2"></div>
+                    <span className="font-medium">Vegetation Loss</span>
+                  </div>
+                  <div className="text-2xl font-bold text-red-600">
+                    {safePercentage((result as any)?.changeVisualization?.lossPercentage || 0, 1)}
+                  </div>
+                  <div className="text-xs text-gray-600">Lost vegetation areas</div>
+                </div>
+                
+                <div className="text-center">
+                  <div className="flex items-center justify-center mb-2">
+                    <div className="w-4 h-4 bg-purple-500 rounded mr-2"></div>
+                    <span className="font-medium">Stable Vegetation</span>
+                  </div>
+                  <div className="text-2xl font-bold text-purple-500">
+                    {safePercentage((result as any)?.changeVisualization?.stablePercentage || 0, 1)}
+                  </div>
+                  <div className="text-xs text-gray-600">Unchanged vegetation</div>
+                </div>
+              </div>
+
+              {/* Net Change Summary */}
+              <div className="bg-white rounded-lg p-3 border">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-gray-700">Net Vegetation Change:</span>
+                  <div className="flex items-center">
+                    {annual.percentChange > 0 ? (
+                      <>
+                        <span className="text-green-600 font-bold">+{safePercentage(annual.percentChange, 1)}</span>
+                        <span className="text-green-600 ml-1">↗️</span>
+                      </>
+                    ) : annual.percentChange < 0 ? (
+                      <>
+                        <span className="text-red-600 font-bold">{safePercentage(annual.percentChange, 1)}</span>
+                        <span className="text-red-600 ml-1">↘️</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-gray-600 font-bold">{safePercentage(annual.percentChange, 1)}</span>
+                        <span className="text-gray-600 ml-1">➡️</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div className="text-xs text-gray-500 mt-1">
+                  From {safePercentage(annual.baselineVegetation, 1)} to {safePercentage(annual.compareVegetation, 1)} vegetation coverage
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Processing Information */}
           {hasEnhancedData && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
@@ -286,7 +356,10 @@ export default function ResultsPanel({ status, selectedCity }: ResultsPanelProps
                   let fileIcon = '📁';
                   let fileDescription = '';
                   
-                  if (fileName.includes('vegetation_highlighted')) {
+                  if (fileName.includes('vegetation_change')) {
+                    fileIcon = '🔄';
+                    fileDescription = 'Vegetation change analysis (gain/loss visualization)';
+                  } else if (fileName.includes('vegetation_highlighted')) {
                     fileIcon = '🌱';
                     fileDescription = 'Vegetation density overlay map';
                   } else if (fileName.includes('ndvi_visualization')) {
@@ -340,7 +413,7 @@ export default function ResultsPanel({ status, selectedCity }: ResultsPanelProps
 
           {/* Batch Summary for Multi-City */}
           {Array.isArray((status as any)?.result?.batchSummaries) && ((status as any).result.batchSummaries?.length || 0) > 0 && (
-            <SummaryPanel summaries={(status as any).result.batchSummaries as any} />
+            <SummaryPanel summaries={(status as any).result.batchSummaries as any} processingId={status.id} />
           )}
 
           {/* Enhanced Vegetation Analysis Insights */}

@@ -888,6 +888,9 @@ class PerfectAlignmentSatelliteProcessor:
         # Save NDVI as GeoTIFF with perfect georeferencing
         self.save_georeferenced_ndvi(result['ndvi'])
         
+        # Save city mask for change visualization
+        self.save_city_mask(result.get('city_mask'))
+        
         # Create summary with PERFECT bounds
         summary = {
             'vegetation_percentage': float(result['vegetation_percentage']),
@@ -1017,6 +1020,91 @@ class PerfectAlignmentSatelliteProcessor:
         
         return colored
 
+    def create_vegetation_change_visualization(self, baseline_result, current_result, output_path):
+        """Create vegetation change visualization showing gain/loss between two years"""
+        print(f"🔄 Creating vegetation change visualization...")
+        
+        # Get NDVI data and city masks from both years
+        baseline_ndvi = baseline_result['ndvi']
+        current_ndvi = current_result['ndvi']
+        city_mask = baseline_result.get('city_mask', np.ones_like(baseline_ndvi, dtype=bool))
+        
+        # Ensure both NDVI arrays have the same shape
+        if baseline_ndvi.shape != current_ndvi.shape:
+            print(f"⚠️ NDVI shape mismatch: baseline {baseline_ndvi.shape} vs current {current_ndvi.shape}")
+            return None
+        
+        height, width = baseline_ndvi.shape
+        
+        # Define vegetation threshold (same as used in processing)
+        veg_threshold = max(0.2, self.ndvi_threshold - 0.05)
+        
+        # Create vegetation masks for both years
+        baseline_veg = (baseline_ndvi >= veg_threshold) & city_mask
+        current_veg = (current_ndvi >= veg_threshold) & city_mask
+        
+        # Calculate change categories
+        vegetation_gain = current_veg & ~baseline_veg  # New vegetation
+        vegetation_loss = baseline_veg & ~current_veg  # Lost vegetation
+        vegetation_stable = baseline_veg & current_veg  # Stable vegetation
+        no_vegetation = ~baseline_veg & ~current_veg & city_mask  # Consistently no vegetation
+        
+        # Create RGB change visualization
+        change_image = np.zeros((height, width, 3), dtype=np.uint8)
+        
+        # Color scheme:
+        # Green = Vegetation gain
+        # Red = Vegetation loss  
+        # Light green = Stable vegetation
+        # Gray = No vegetation (both years)
+        # Black = Outside city
+        
+        change_image[vegetation_gain] = [0, 255, 0]      # Bright green for gain
+        change_image[vegetation_loss] = [255, 0, 0]      # Bright red for loss
+        change_image[vegetation_stable] = [100, 200, 100] # Light green for stable
+        change_image[no_vegetation] = [128, 128, 128]    # Gray for no vegetation
+        change_image[~city_mask] = [0, 0, 0]             # Black outside city
+        
+        # Calculate statistics
+        gain_pixels = np.sum(vegetation_gain)
+        loss_pixels = np.sum(vegetation_loss)
+        stable_pixels = np.sum(vegetation_stable)
+        total_city_pixels = np.sum(city_mask)
+        
+        gain_percentage = (gain_pixels / total_city_pixels) * 100 if total_city_pixels > 0 else 0
+        loss_percentage = (loss_pixels / total_city_pixels) * 100 if total_city_pixels > 0 else 0
+        stable_percentage = (stable_pixels / total_city_pixels) * 100 if total_city_pixels > 0 else 0
+        
+        print(f"   📊 Vegetation Change Analysis:")
+        print(f"     🟢 Vegetation Gain: {gain_percentage:.1f}% ({gain_pixels:,} pixels)")
+        print(f"     🔴 Vegetation Loss: {loss_percentage:.1f}% ({loss_pixels:,} pixels)")
+        print(f"     🟢 Stable Vegetation: {stable_percentage:.1f}% ({stable_pixels:,} pixels)")
+        print(f"     📍 Total City Pixels: {total_city_pixels:,}")
+        
+        # Save the change visualization
+        try:
+            success = cv2.imwrite(str(output_path), change_image)
+            if success:
+                print(f"   ✅ Change visualization saved: {output_path}")
+            else:
+                print(f"   ❌ Failed to save change visualization")
+                return None
+        except Exception as e:
+            print(f"   ❌ Error saving change visualization: {e}")
+            return None
+        
+        # Return statistics for use in summary
+        return {
+            'gain_percentage': gain_percentage,
+            'loss_percentage': loss_percentage,
+            'stable_percentage': stable_percentage,
+            'gain_pixels': gain_pixels,
+            'loss_pixels': loss_pixels,
+            'stable_pixels': stable_pixels,
+            'total_city_pixels': total_city_pixels,
+            'change_image_path': str(output_path)
+        }
+
     def save_georeferenced_ndvi(self, ndvi):
         """Save NDVI as GeoTIFF with perfect georeferencing"""
         if not self.wgs84_bounds:
@@ -1046,6 +1134,20 @@ class PerfectAlignmentSatelliteProcessor:
             transform=transform
         ) as dst:
             dst.write(ndvi, 1)
+            
+        print(f"✅ NDVI GeoTIFF saved: {ndvi_tiff_path}")
+        
+        # Also save raw numpy array for change visualization
+        ndvi_npy_path = self.vegetation_dir / 'ndvi_data.npy'
+        np.save(ndvi_npy_path, ndvi)
+        print(f"✅ NDVI numpy array saved: {ndvi_npy_path}")
+        
+    def save_city_mask(self, city_mask):
+        """Save city mask for change visualization"""
+        if city_mask is not None:
+            mask_npy_path = self.vegetation_dir / 'city_mask.npy'
+            np.save(mask_npy_path, city_mask)
+            print(f"✅ City mask saved: {mask_npy_path}")
 
 def main():
     """Main function to run perfect alignment processing"""

@@ -164,7 +164,7 @@ export default function Home() {
         </div>
 
         {/* Main Content */}
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-none mx-auto px-4">
           <div className="space-y-8">
             <div className="space-y-8">
               {/* City Selection & Configuration */}
