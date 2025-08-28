@@ -355,3 +355,47 @@ curl /api/status/bbd6175e-... → {"progress":2,"status":"downloading"}
 - Scripts are executable and ready for deployment
 
 **Status**: 🎯 **READY FOR DEPLOYMENT** - Complete AWS infrastructure configuration created and validated. Run `./deploy.sh` to deploy the Greenspace application to production.
+
+## 2025-01-29: Git Repository Cleanup - Large File Issue Resolved
+
+### 🧹 **Fixed GitHub Push Failures Due to Large .terraform Files**
+
+**Problem**: Git push was failing with "File size limit exceeded" errors for `.terraform/providers/.../terraform-provider-aws_v5.100.0_x5` (648.39 MB), even though `.terraform/` was already in `.gitignore`.
+
+**Root Cause**: The `.terraform/` directory was already tracked by Git before being added to `.gitignore`. Adding files to `.gitignore` doesn't remove them from Git history.
+
+#### ✅ **Solution Applied:**
+
+1. **Verified .gitignore**: Confirmed `.terraform/` was correctly listed in `.gitignore` (line 7)
+
+2. **Removed from Git Tracking**: 
+   ```bash
+   git rm -r --cached .terraform/
+   ```
+
+3. **Cleaned Git History**: Used `git filter-branch` to remove `.terraform/` files from entire repository history:
+   ```bash
+   git filter-branch --force --index-filter 'git rm -r --cached --ignore-unmatch .terraform/' --prune-empty --tag-name-filter cat -- --all
+   ```
+
+4. **Cleaned Up References**: 
+   - Removed backup references: `git for-each-ref --format='delete %(refname)' refs/original | git update-ref --stdin`
+   - Garbage collected: `git reflog expire --expire=now --all && git gc --prune=now --aggressive`
+
+5. **Force Pushed Clean History**: 
+   ```bash
+   git push --force
+   ```
+
+#### ✅ **Results:**
+- ✅ **Repository Size**: Reduced from 882.48 MiB to manageable size
+- ✅ **Push Success**: `git push` now works without file size errors
+- ✅ **History Cleaned**: Large Terraform provider files completely removed from Git history
+- ✅ **Future Prevention**: `.gitignore` properly configured to prevent re-tracking
+
+#### ✅ **Files Removed from History:**
+- `.terraform/providers/registry.terraform.io/hashicorp/aws/5.100.0/darwin_arm64/LICENSE.txt`
+- `.terraform/providers/registry.terraform.io/hashicorp/aws/5.100.0/darwin_arm64/terraform-provider-aws_v5.100.0_x5` (648.39 MB)
+- `.terraform.tfstate.lock.info`
+
+**Status**: ✅ **RESOLVED** - Repository is now clean and pushes successfully to GitHub. Future Terraform operations will not track provider files due to proper `.gitignore` configuration.
