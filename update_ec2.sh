@@ -4,7 +4,7 @@ set -e
 # Configuration
 EC2_HOST="3.237.242.91" # Will be populated after terraform apply
 SSH_KEY="salman-dev.pem"
-REPO_URL="https://github.com/main-salman/greenspace-mei.git"
+REPO_URL="https://github.com/main-salman/greenspace-detection-platform.git"
 
 # Colors for output
 RED='\033[0;31m'
@@ -34,7 +34,7 @@ set -e
 
 echo "🔄 Updating Greenspace application..."
 
-cd /home/ec2-user/greenspace-mei
+cd /home/ec2-user/greenspace-detection-platform
 
 # Pull latest changes
 echo "📥 Pulling latest code from repository..."

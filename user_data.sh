@@ -38,10 +38,10 @@ cd /home/ec2-user
 export PATH=$PATH:/usr/local/bin
 
 echo "[user_data] Cloning greenspace app repo..."
-if [ ! -d "greenspace-mei" ]; then
-  git clone https://github.com/main-salman/greenspace-mei.git
+if [ ! -d "greenspace-detection-platform" ]; then
+  git clone https://github.com/main-salman/greenspace-detection-platform.git
 fi
-cd greenspace-mei
+cd greenspace-detection-platform
 
 echo "[user_data] Setting up Python virtual environment for local app..."
 if [ ! -d local_venv ]; then
@@ -185,9 +185,9 @@ After=network.target
 [Service]
 Type=simple
 User=ec2-user
-WorkingDirectory=/home/ec2-user/greenspace-mei
-Environment=PATH=/home/ec2-user/greenspace-mei/local_venv/bin
-ExecStart=/home/ec2-user/greenspace-mei/local_venv/bin/python local_app/main.py
+WorkingDirectory=/home/ec2-user/greenspace-detection-platform
+Environment=PATH=/home/ec2-user/greenspace-detection-platform/local_venv/bin
+ExecStart=/home/ec2-user/greenspace-detection-platform/local_venv/bin/python local_app/main.py
 Restart=always
 RestartSec=10
 
