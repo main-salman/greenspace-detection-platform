@@ -5,7 +5,11 @@ echo "[user_data] Greenspace app setup started at $(date)"
 
 # System dependencies
 sudo yum update -y
-sudo yum install -y git nginx unzip curl nodejs npm
+sudo yum install -y git nginx unzip curl
+
+# Install Node.js via Amazon Linux Extras
+sudo amazon-linux-extras install -y nodejs14
+sudo yum install -y npm
 
 # Install Python 3.8 (required for the application)
 sudo amazon-linux-extras install python3.8 -y
@@ -43,27 +47,30 @@ if [ ! -d "greenspace-detection-platform" ]; then
 fi
 cd greenspace-detection-platform
 
-echo "[user_data] Setting up Python virtual environment for local app..."
-if [ ! -d local_venv ]; then
-  python3.8 -m venv local_venv
+echo "[user_data] Setting up Next.js application..."
+cd greenspace-app
+
+echo "[user_data] Installing Node.js dependencies..."
+npm install
+
+echo "[user_data] Building Next.js application..."
+npm run build
+
+echo "[user_data] Setting up Python virtual environment..."
+if [ ! -d venv ]; then
+  python3.8 -m venv venv
 fi
 
-echo "[user_data] Installing Python requirements for local app..."
-source local_venv/bin/activate
+echo "[user_data] Installing Python requirements..."
+source venv/bin/activate
 pip install --upgrade pip
-pip install -r local_app/requirements.txt
+pip install -r python_scripts/requirements.txt
 
-echo "[user_data] Building Next.js app for static export..."
-cd greenspace-app
-npm install
-npm run build
-npm run export
+echo "[user_data] Starting Next.js application..."
+nohup npm start > ../greenspace_app.log 2>&1 &
+
+echo "[user_data] Next.js application started on port 3000"
 cd ..
-
-echo "[user_data] Starting FastAPI server..."
-nohup ./local_venv/bin/python local_app/main.py > greenspace_app.log 2>&1 &
-
-echo "[user_data] FastAPI server started on port 8000"
 EOF
 
 sudo chown ec2-user:ec2-user /home/ec2-user/ec2_setup.sh
@@ -106,7 +113,7 @@ server {
     listen 80;
     server_name $APP_DOMAIN;
     location / {
-        proxy_pass http://127.0.0.1:8000;
+        proxy_pass http://127.0.0.1:3000;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
@@ -148,7 +155,7 @@ server {
     ssl_prefer_server_ciphers off;
     
     location / {
-        proxy_pass http://127.0.0.1:8000;
+        proxy_pass http://127.0.0.1:3000;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
@@ -185,9 +192,9 @@ After=network.target
 [Service]
 Type=simple
 User=ec2-user
-WorkingDirectory=/home/ec2-user/greenspace-detection-platform
-Environment=PATH=/home/ec2-user/greenspace-detection-platform/local_venv/bin
-ExecStart=/home/ec2-user/greenspace-detection-platform/local_venv/bin/python local_app/main.py
+WorkingDirectory=/home/ec2-user/greenspace-detection-platform/greenspace-app
+Environment=PATH=/home/ec2-user/greenspace-detection-platform/greenspace-app/node_modules/.bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/usr/bin/npm start
 Restart=always
 RestartSec=10
 
