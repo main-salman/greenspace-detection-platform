@@ -172,6 +172,10 @@ def create_change_visualization(baseline_ndvi, compare_ndvi, city_mask, output_p
     loss_percentage = (loss_pixels / total_city_pixels) * 100 if total_city_pixels > 0 else 0
     stable_percentage = (stable_pixels / total_city_pixels) * 100 if total_city_pixels > 0 else 0
     
+    # Note: Change analysis uses best month NDVI data for spatial accuracy
+    # Main analysis uses averaged monthly percentages for temporal trends
+    # Some discrepancy between these analyses is scientifically valid
+    
     print(f"   📊 Vegetation Change Analysis:")
     print(f"     🟢 Vegetation Gain: {gain_percentage:.1f}% ({gain_pixels:,} pixels)")
     print(f"     🔴 Vegetation Loss: {loss_percentage:.1f}% ({loss_pixels:,} pixels)")
