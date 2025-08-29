@@ -249,7 +249,6 @@ def main():
     print_progress(50, "Generating change visualization...")
     change_output = Path(output_dir) / "vegetation_change.png"
     stats = create_change_visualization(baseline_ndvi, compare_ndvi, city_mask, change_output, 
-                                      veg_threshold=config.get("ndviThreshold", 0.3),
                                       baseline_rgb=baseline_rgb, compare_rgb=compare_rgb)
     
     if stats:
