@@ -89,108 +89,6 @@ def load_best_data_from_year(year_dir):
     
     return best_ndvi, best_mask, best_rgb
 
-def load_averaged_data_from_year(year_dir, veg_threshold=0.3):
-    """Load and average NDVI data from all months in a year directory - matches main analysis method"""
-    year_path = Path(year_dir)
-    if not year_path.exists():
-        print(f"Year directory not found: {year_dir}")
-        return None, None, None
-    
-    # Look for NDVI data files in monthly subdirectories
-    data_files = []
-    for month_dir in year_path.iterdir():
-        if month_dir.is_dir():
-            # Look for NDVI data in this month
-            ndvi_pattern = month_dir / "vegetation_analysis" / "ndvi_data.npy"
-            if ndvi_pattern.exists():
-                data_files.append(month_dir)
-    
-    if not data_files:
-        print(f"No NDVI data found in {year_dir}")
-        return None, None, None
-    
-    print(f"   📁 Found {len(data_files)} monthly NDVI datasets - averaging across all months")
-    
-    # Load all NDVI arrays and calculate vegetation percentages for each month
-    monthly_veg_percentages = []
-    reference_shape = None
-    reference_mask = None
-    best_rgb = None
-    
-    for month_dir in data_files:
-        try:
-            ndvi_file = month_dir / "vegetation_analysis" / "ndvi_data.npy"
-            ndvi = np.load(ndvi_file)
-            
-            # Look for corresponding city mask
-            mask_file = month_dir / "vegetation_analysis" / "city_mask.npy"
-            if mask_file.exists():
-                city_mask = np.load(mask_file)
-            else:
-                city_mask = np.ones_like(ndvi, dtype=bool)
-            
-            # Set reference shape and mask from first valid month
-            if reference_shape is None:
-                reference_shape = ndvi.shape
-                reference_mask = city_mask
-                
-                # Try to load RGB image from first month
-                rgb_files = list(month_dir.glob("**/composite_*.tif"))
-                if not rgb_files:
-                    rgb_files = list(month_dir.glob("**/natural_color_*.png"))
-                
-                if rgb_files:
-                    try:
-                        import rasterio
-                        with rasterio.open(str(rgb_files[0])) as src:
-                            best_rgb = src.read([1, 2, 3]).transpose(1, 2, 0)
-                    except Exception as e:
-                        print(f"   ⚠️ Could not load RGB for {month_dir.name}: {e}")
-            
-            # Calculate vegetation percentage for this month using same threshold as main analysis
-            vegetation_mask = (ndvi >= veg_threshold) & city_mask
-            total_pixels = np.sum(city_mask)
-            vegetation_pixels = np.sum(vegetation_mask)
-            
-            if total_pixels > 0:
-                veg_percentage = (vegetation_pixels / total_pixels) * 100
-                monthly_veg_percentages.append(veg_percentage)
-                print(f"   📊 Month {month_dir.name}: {veg_percentage:.1f}% vegetation")
-            
-        except Exception as e:
-            print(f"   ❌ Error loading {month_dir}: {e}")
-            continue
-    
-    if not monthly_veg_percentages:
-        print("   ❌ No valid vegetation data found")
-        return None, None, None
-    
-    # Calculate average vegetation percentage (same as main analysis)
-    average_veg_percentage = sum(monthly_veg_percentages) / len(monthly_veg_percentages)
-    print(f"   ✅ Average vegetation across {len(monthly_veg_percentages)} months: {average_veg_percentage:.1f}%")
-    
-    # Create a synthetic NDVI array that represents this average vegetation percentage
-    # This ensures the change analysis uses the same vegetation percentage as the main analysis
-    synthetic_ndvi = np.full(reference_shape, 0.0, dtype=np.float32)
-    
-    # Set pixels to vegetation threshold based on average vegetation percentage
-    total_pixels = np.sum(reference_mask)
-    target_veg_pixels = int((average_veg_percentage / 100) * total_pixels)
-    
-    # Randomly distribute vegetation pixels to match the average percentage
-    # This is a simplification but ensures mathematical consistency
-    mask_indices = np.where(reference_mask)
-    if len(mask_indices[0]) >= target_veg_pixels:
-        # Randomly select pixels to be vegetation
-        random_indices = np.random.choice(len(mask_indices[0]), target_veg_pixels, replace=False)
-        selected_rows = mask_indices[0][random_indices]
-        selected_cols = mask_indices[1][random_indices]
-        synthetic_ndvi[selected_rows, selected_cols] = veg_threshold + 0.1  # Slightly above threshold
-    
-    print(f"   🔧 Created synthetic NDVI representing {average_veg_percentage:.1f}% vegetation")
-    
-    return synthetic_ndvi, reference_mask, best_rgb
-
 def create_leaflet_style_background(height, width, city_mask):
     """Create a leaflet-style map background for areas outside the city"""
     background = np.full((height, width, 3), [240, 240, 240], dtype=np.uint8)  # Light gray base
@@ -340,10 +238,10 @@ def main():
         sys.exit(1)
     
     print_progress(10, "Loading baseline data...")
-    baseline_ndvi, baseline_mask, baseline_rgb = load_averaged_data_from_year(baseline_dir, config.get("ndviThreshold", 0.3))
+    baseline_ndvi, baseline_mask, baseline_rgb = load_best_data_from_year(baseline_dir)
     
     print_progress(30, "Loading compare data...")
-    compare_ndvi, compare_mask, compare_rgb = load_averaged_data_from_year(compare_dir, config.get("ndviThreshold", 0.3))
+    compare_ndvi, compare_mask, compare_rgb = load_best_data_from_year(compare_dir)
     
     # Use the mask from baseline (should be the same city)
     city_mask = baseline_mask if baseline_mask is not None else compare_mask
