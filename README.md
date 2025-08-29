@@ -14,10 +14,10 @@ A powerful, **API-key-free** satellite imagery analysis platform that detects an
 
 ## 🚀 Results Showcase
 
-<img width="778" height="1229" alt="image" src="https://github.com/user-attachments/assets/00b4df36-87cb-423a-ab73-eb463f468475" />
+<img width="1496" height="1189" alt="image" src="https://github.com/user-attachments/assets/6fa303b1-7deb-4a06-b634-4bb1de37848b" />
 
+<img width="1288" height="1138" alt="image" src="https://github.com/user-attachments/assets/bfe7fcff-c394-4365-b389-58fe290b28c7" />
 
-<img width="767" height="1247" alt="image" src="https://github.com/user-attachments/assets/e47d57d0-6e07-44a1-aca5-c9048e1ceb53" />
 
 
 ## 🌳 Enhanced Vegetation Categories
