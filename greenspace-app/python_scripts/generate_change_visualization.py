@@ -108,7 +108,7 @@ def create_leaflet_style_background(height, width, city_mask):
     
     return background
 
-def create_change_visualization(baseline_ndvi, compare_ndvi, city_mask, output_path, veg_threshold=0.2, baseline_rgb=None, compare_rgb=None):
+def create_change_visualization(baseline_ndvi, compare_ndvi, city_mask, output_path, veg_threshold=0.3, baseline_rgb=None, compare_rgb=None):
     """Create vegetation change visualization"""
     print("🔄 Creating vegetation change visualization...")
     
@@ -249,6 +249,7 @@ def main():
     print_progress(50, "Generating change visualization...")
     change_output = Path(output_dir) / "vegetation_change.png"
     stats = create_change_visualization(baseline_ndvi, compare_ndvi, city_mask, change_output, 
+                                      veg_threshold=config.get("ndviThreshold", 0.3),
                                       baseline_rgb=baseline_rgb, compare_rgb=compare_rgb)
     
     if stats:
