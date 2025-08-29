@@ -89,6 +89,113 @@ def load_best_data_from_year(year_dir):
     
     return best_ndvi, best_mask, best_rgb
 
+def load_composite_data_from_year(year_dir, veg_threshold=0.3):
+    """Load and composite NDVI data from all months in a year directory - matches main analysis method"""
+    year_path = Path(year_dir)
+    if not year_path.exists():
+        print(f"Year directory not found: {year_dir}")
+        return None, None, None
+    
+    # Look for monthly vegetation analysis summaries (same as main analysis uses)
+    monthly_data = []
+    reference_shape = None
+    reference_mask = None
+    best_rgb = None
+    
+    for month_dir in year_path.iterdir():
+        if month_dir.is_dir():
+            try:
+                # Read the vegetation summary from each month (same as main analysis)
+                summary_file = month_dir / "vegetation_analysis" / "vegetation_analysis_summary.json"
+                if summary_file.exists():
+                    with open(summary_file, 'r') as f:
+                        summary = json.load(f)
+                    
+                    # Get vegetation percentage calculated by main processor
+                    veg_percentage = summary.get('vegetation_percentage', 0)
+                    
+                    # Load NDVI data for this month
+                    ndvi_file = month_dir / "vegetation_analysis" / "ndvi_data.npy"
+                    if ndvi_file.exists():
+                        ndvi = np.load(ndvi_file)
+                        
+                        # Load city mask
+                        mask_file = month_dir / "vegetation_analysis" / "city_mask.npy"
+                        if mask_file.exists():
+                            city_mask = np.load(mask_file)
+                        else:
+                            city_mask = np.ones_like(ndvi, dtype=bool)
+                        
+                        # Set reference shape from first valid month
+                        if reference_shape is None:
+                            reference_shape = ndvi.shape
+                            reference_mask = city_mask
+                        
+                        monthly_data.append({
+                            'ndvi': ndvi,
+                            'mask': city_mask,
+                            'veg_percentage': veg_percentage,
+                            'month': month_dir.name
+                        })
+                        
+                        print(f"   📊 Month {month_dir.name}: {veg_percentage:.1f}% vegetation")
+                        
+                        # Keep RGB from first available month for visualization
+                        if best_rgb is None:
+                            rgb_files = list(month_dir.glob("**/composite_*.tif"))
+                            if not rgb_files:
+                                rgb_files = list(month_dir.glob("**/composite*.tif"))
+                            
+                            if rgb_files:
+                                try:
+                                    import rasterio
+                                    with rasterio.open(rgb_files[0]) as src:
+                                        best_rgb = np.stack([
+                                            src.read(1),  # Red
+                                            src.read(2),  # Green  
+                                            src.read(3)   # Blue
+                                        ], axis=2)
+                                        best_rgb = np.clip((best_rgb / np.max(best_rgb)) * 255, 0, 255).astype(np.uint8)
+                                except Exception as e:
+                                    print(f"   ⚠️ Could not load RGB for {month_dir.name}: {e}")
+            
+            except Exception as e:
+                print(f"   ❌ Error processing {month_dir}: {e}")
+                continue
+    
+    if not monthly_data:
+        print("   ❌ No valid monthly data found")
+        return None, None, None
+    
+    print(f"   📁 Loaded {len(monthly_data)} months of NDVI data")
+    
+    # Calculate average vegetation percentage (exactly same as main analysis)
+    monthly_percentages = [m['veg_percentage'] for m in monthly_data]
+    average_veg_percentage = sum(monthly_percentages) / len(monthly_percentages)
+    print(f"   ✅ Average vegetation: {average_veg_percentage:.1f}% (same calculation as main analysis)")
+    
+    # Create composite NDVI by averaging all monthly NDVI arrays (real data only)
+    composite_ndvi = np.zeros(reference_shape, dtype=np.float32)
+    composite_count = np.zeros(reference_shape, dtype=np.int32)
+    
+    for month_data in monthly_data:
+        ndvi = month_data['ndvi']
+        mask = month_data['mask']
+        
+        # Only include valid NDVI values in the composite
+        valid_pixels = mask & (ndvi > -1) & (ndvi < 1)  # Valid NDVI range
+        composite_ndvi[valid_pixels] += ndvi[valid_pixels]
+        composite_count[valid_pixels] += 1
+    
+    # Calculate average where we have data (real composite from all months)
+    valid_composite = composite_count > 0
+    composite_ndvi[valid_composite] = composite_ndvi[valid_composite] / composite_count[valid_composite]
+    
+    print(f"   🔧 Created real NDVI composite from {len(monthly_data)} months")
+    print(f"   📊 Composite represents {average_veg_percentage:.1f}% vegetation (matches main analysis)")
+    
+    return composite_ndvi, reference_mask, best_rgb
+
 def create_leaflet_style_background(height, width, city_mask):
     """Create a leaflet-style map background for areas outside the city"""
     background = np.full((height, width, 3), [240, 240, 240], dtype=np.uint8)  # Light gray base
@@ -242,10 +349,10 @@ def main():
         sys.exit(1)
     
     print_progress(10, "Loading baseline data...")
-    baseline_ndvi, baseline_mask, baseline_rgb = load_best_data_from_year(baseline_dir)
+    baseline_ndvi, baseline_mask, baseline_rgb = load_composite_data_from_year(baseline_dir, config.get("ndviThreshold", 0.3))
     
     print_progress(30, "Loading compare data...")
-    compare_ndvi, compare_mask, compare_rgb = load_best_data_from_year(compare_dir)
+    compare_ndvi, compare_mask, compare_rgb = load_composite_data_from_year(compare_dir, config.get("ndviThreshold", 0.3))
     
     # Use the mask from baseline (should be the same city)
     city_mask = baseline_mask if baseline_mask is not None else compare_mask
